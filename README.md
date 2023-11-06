@@ -1,16 +1,5 @@
 # Distributed Cloud Application
 
-## Set up
-Add the following dependency to you pom.xml file, this allows jackson to handle date/time objects:
-```xml
-<dependency>
-    <groupId>com.fasterxml.jackson.datatype</groupId>
-    <artifactId>jackson-datatype-jsr310</artifactId>
-</dependency>
-```
-
-
-
 ## Application Overview
 This distributed cloud application is a Java-based web application developed to manage seat reservations for trains operated by various train companies. The application leverages cloud computing for resource outsourcing and utilizes the Spring Boot framework for streamlined development.
 
