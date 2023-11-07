@@ -1,28 +1,29 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
-import be.kuleuven.distributedsystems.cloud.entities.Booking;
-import be.kuleuven.distributedsystems.cloud.entities.Quote;
-import be.kuleuven.distributedsystems.cloud.entities.Seat;
-import be.kuleuven.distributedsystems.cloud.entities.Ticket;
-import be.kuleuven.distributedsystems.cloud.entities.Train;
-import be.kuleuven.distributedsystems.cloud.entities.TrainFunctions;
+import be.kuleuven.distributedsystems.cloud.entities.*;
 
+import java.awt.print.Book;
+import java.net.http.HttpResponse;
 import java.util.*;
 
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.sendgrid.Response;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.threeten.bp.LocalTime;
 import reactor.core.publisher.Flux;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import java.time.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
 
 @RestController
 //RequestMapping("api/")
@@ -36,6 +37,7 @@ public class TrainsController {
 
     //key = traincompany name, value = link to their trains, for managing new train companies
     private static final Map<String, String> trainCompanies = new HashMap<>();
+    private static final ArrayList<Booking> bookings = new ArrayList<>();
 
     public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -59,7 +61,7 @@ public class TrainsController {
     @GetMapping("api/getTrains")
     public ResponseEntity<List<Train>> getallTrains() {
 
-        // get json data from the the baseurl
+        // get json data from the baseurl
         String jsonData = getjson(ReliableTrains);
 
         // Extract train objects from json data
@@ -129,26 +131,72 @@ public class TrainsController {
     @GetMapping("api/getSeat")
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
 
-        //get a list of all the times
+        // get a list of all the times
         ResponseEntity<?> tempTimes = getTrainTimes(trainCompany, trainId);
         List<String> times = (List<String>) tempTimes.getBody();
         Optional<Seat> seat;
 
         // for each instance of a train by time, check all seats for match
-        //return error if not found
+        // return error if not found
         for (String time : times) {
             List<List<Seat>> seats = getAvailableSeats(trainCompany, trainId, time).getBody();
 
             seat = TrainFunctions.getSeatByID(seatId, seats);
                 if (seat.isPresent()) {
-                    return ResponseEntity.ok(seat); // HTTP 200 with the train as the response body
+                    return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
                 }
         }
         String errorMessage = "Seat not found" ;
         return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
     }
 
+    //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
+    @PostMapping("api/confirmQuotes")
+    public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
+        //create list for tickets, generate booking referenece and get the user
+        List<Ticket> tickets = new ArrayList<>();
+        UUID bookingRef = UUID.randomUUID();
+        User user = getUser();
 
+        //for each quote, create a ticket
+        quotes.stream().forEach(quote -> {
+            Ticket newTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
+            tickets.add(newTicket);
+        });
+
+        //create a booking out of the tickets and add it to the bookings stored locally
+        Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
+        bookings.add(booking);
+
+        String successMsg = "Successfully submitted";
+        return ResponseEntity.status(204).body(successMsg);
+    }
+
+    // get all the bookings from a specific user
+    @GetMapping("api/getBookings")
+    public ResponseEntity<?> getBookings() {
+        //get the users email
+        String email = getUser().getEmail();
+        List<Booking> bookingList = new ArrayList<>();
+
+        //check for bookings of the current user, adding them to list to be returned
+        for (Booking booking : bookings) {
+            if (Objects.equals(booking.getCustomer(), email)){
+                bookingList.add(booking);
+            }
+        }
+
+        return ResponseEntity.ok(bookingList);
+    }
+
+    // returns all the bookings
+    // NEED TO CHANGE SO THAT ONLY MANAGERS CAN GET ALL BOOKINGS
+    @GetMapping("api/getAllBookings")
+    public ResponseEntity<?> getAllBookings() {
+        //create a list of all the bookings and return it
+        List<Booking> bookingList = new ArrayList<>(bookings);
+        return ResponseEntity.ok(bookingList);
+    }
 }
 
 

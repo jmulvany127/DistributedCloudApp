@@ -1,3 +1,5 @@
 firebase-tools-instant-win.exe
 .idea/
 target/
+firestore-debug.log
+firebase-debug.log

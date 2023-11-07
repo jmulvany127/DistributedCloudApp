@@ -149,12 +149,6 @@ public class TrainFunctions {
     }
 
 
-
-
-
-
-
-
     public static List<String> extractTrainTimes(String jsonData) {
         List<String> times = new ArrayList<>();
         //takes json data and converts it to objects
