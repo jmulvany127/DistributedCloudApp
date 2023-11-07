@@ -1,10 +1,13 @@
 package be.kuleuven.distributedsystems.cloud.auth;
 
 import be.kuleuven.distributedsystems.cloud.entities.User;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.http.protocol.ResponseContent;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
@@ -15,19 +18,43 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collection;
 
+import java.util.*;
+
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // TODO: (level 1) decode Identity Token and assign correct email and role
-        // TODO: (level 2) verify Identity Token
+        //get the openId token and initialise variables
+        String auth = request.getHeader("Authorization");
+        DecodedJWT token = null;
+        String email = null;
+        String role = null;
 
-        var user = new User("test@example.com", new String[]{});
+        //check to ensure we got a authorization token
+        if (auth != null){
+            //take out the "Bearer" at the start of the string and decode
+            String[] authParts = auth.split(" ");
+            token = JWT.decode(authParts[1]);
+            //extract the email and the
+            email = String.valueOf(token.getClaim("email"));
+            role = String.valueOf(token.getClaim("role"));
+        }
+
+        //create a new user
+        var otheruser = new User(email, new String[]{role});
+
+        // TODO: (level 2) verify Identity Token
+        //var otheruser = new User("test@example.com", new String[]{});   //old code that was given
         SecurityContext context = SecurityContextHolder.getContext();
-        context.setAuthentication(new FirebaseAuthentication(user));
+        context.setAuthentication(new FirebaseAuthentication(otheruser));
 
         filterChain.doFilter(request, response);
+    }
+
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        return request.getHeader("Authorization");
     }
 
     @Override
