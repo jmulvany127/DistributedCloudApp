@@ -190,12 +190,21 @@ public class TrainsController {
     }
 
     // returns all the bookings
-    // NEED TO CHANGE SO THAT ONLY MANAGERS CAN GET ALL BOOKINGS
     @GetMapping("api/getAllBookings")
     public ResponseEntity<?> getAllBookings() {
-        //create a list of all the bookings and return it
         List<Booking> bookingList = new ArrayList<>(bookings);
         return ResponseEntity.ok(bookingList);
+    }
+
+    //blank function just to check authority, should be easy to complete
+    @GetMapping("api/getBestCustomers")
+    public ResponseEntity<?> getBestCustomers() {
+        System.out.println("in getBestCustomers");
+        ArrayList<String> customers = new ArrayList<>();
+
+        String fakeCustomer = "fake customer";
+        customers.add(fakeCustomer);
+        return ResponseEntity.ok(customers);
     }
 }
 
