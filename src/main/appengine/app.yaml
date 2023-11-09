@@ -16,3 +16,7 @@ automatic_scaling:
   max_pending_latency: 15000ms
   target_cpu_utilization: 0.9
   target_throughput_utilization: 0.9
+
+logging:
+  level:
+    org.springframework.security: DEBUG
