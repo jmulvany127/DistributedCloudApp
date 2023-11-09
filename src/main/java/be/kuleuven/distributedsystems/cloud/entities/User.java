@@ -20,6 +20,12 @@ public class User {
         return roles;
     }
 
+//    public String getRole() {
+//        String role = String.valueOf(roles);
+//        return  role.replace("[", "").replace("]", "").replace("\"", "");
+//
+//    }
+
     public boolean isManager() {
         return this.roles != null && Arrays.stream(this.roles).toList().contains("manager");
     }

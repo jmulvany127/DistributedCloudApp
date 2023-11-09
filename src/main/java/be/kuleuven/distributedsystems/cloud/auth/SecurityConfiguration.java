@@ -26,9 +26,13 @@ public class SecurityConfiguration {
         http.sessionManagement(httpSecuritySessionManagementConfigurer ->
                 httpSecuritySessionManagementConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests((authz) -> authz
-                .requestMatchers("/api/**").authenticated()
+                .requestMatchers("/api/getAllBookings", "/api/getBestCustomers").hasRole("manager") //allow managers to access these endpoints
+                .requestMatchers("/api/**").hasAnyRole("user", "manager") //allow users and managers to access these endpoints
                 .anyRequest().permitAll());
         http.addFilterBefore(this.securityFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+
+
+
 }
