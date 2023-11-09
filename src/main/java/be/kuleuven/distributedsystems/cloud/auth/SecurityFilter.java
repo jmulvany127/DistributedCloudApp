@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.http.protocol.ResponseContent;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.util.Collection;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
@@ -27,30 +29,40 @@ public class SecurityFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // TODO: (level 1) decode Identity Token and assign correct email and role
         //get the openId token and initialise variables
-        String auth = request.getHeader("Authorization");
+        String auth = extractTokenFromRequest(request);
         DecodedJWT token = null;
         String email = null;
-        String role = null;
+        //make every user have the "user" role by default
+        String role = "user";
 
-        //check to ensure we got a authorization token
+
+        //check to ensure authorization token is not null
         if (auth != null){
             //take out the "Bearer" at the start of the string and decode
             String[] authParts = auth.split(" ");
             token = JWT.decode(authParts[1]);
+            System.out.print(token);
             //extract the email and the
             email = String.valueOf(token.getClaim("email"));
-            role = String.valueOf(token.getClaim("role"));
+            role = String.valueOf(token.getClaim("roles"));
         }
+        //removing the array characters from the string "role"
+        role = role.replace("[", "").replace("]", "").replace("\"", "");
 
-        //create a new user
+        //create a new user with the "user" role or the "manager" role
         var otheruser = new User(email, new String[]{role});
+
+        //given code : create the security context based on the user
+        SecurityContext context = SecurityContextHolder.getContext();
+        context.setAuthentication(new FirebaseAuthentication(otheruser));
+        filterChain.doFilter(request, response);
+
 
         // TODO: (level 2) verify Identity Token
         //var otheruser = new User("test@example.com", new String[]{});   //old code that was given
-        SecurityContext context = SecurityContextHolder.getContext();
-        context.setAuthentication(new FirebaseAuthentication(otheruser));
+        //SecurityContext context = SecurityContextHolder.getContext();
+        //context.setAuthentication(new FirebaseAuthentication(otheruser));
 
-        filterChain.doFilter(request, response);
     }
 
     private String extractTokenFromRequest(HttpServletRequest request) {
@@ -67,6 +79,7 @@ public class SecurityFilter extends OncePerRequestFilter {
         return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
+
     private static class FirebaseAuthentication implements Authentication {
         private final User user;
 
@@ -76,7 +89,13 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         @Override
         public Collection<? extends GrantedAuthority> getAuthorities() {
-            return null;
+            //if the user is a manager assign them that ROLE
+            if (user.isManager()){
+                System.out.println("here");
+                return Collections.singleton(new SimpleGrantedAuthority("ROLE_manager"));
+            }
+            else //if user is not a manager assign them the user ROLE
+                return Collections.singleton(new SimpleGrantedAuthority("ROLE_user"));
         }
 
         @Override
