@@ -9,6 +9,7 @@ import java.util.*;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.sendgrid.Response;
+import org.springframework.cache.interceptor.CacheInterceptor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -200,12 +201,42 @@ public class TrainsController {
     @GetMapping("api/getBestCustomers")
     public ResponseEntity<?> getBestCustomers() {
         System.out.println("in getBestCustomers");
-        ArrayList<String> customers = new ArrayList<>();
+        ArrayList<Customer> customerList = new ArrayList<>();
 
-        String fakeCustomer = "fake customer";
-        customers.add(fakeCustomer);
-        return ResponseEntity.ok(customers);
+        for (Booking booking : bookings) {
+            String customerName = booking.getCustomer();
+            List<Ticket> tickets = booking.getTickets();
+            int length = tickets.size();
+            boolean existingCustomer = false;
+            //if the customer is already in the list, increase their ticket count
+            for (Customer customer : customerList) {
+                if (customerName.equals(customer.getCustomer())) {
+                    customer.addTickets(length);
+                    existingCustomer = true;
+                }
+            }
+            if (!existingCustomer){
+                customerList.add(new Customer(customerName, length));
+            }
+        }
+
+        Customer bestCustomer = new Customer("No customers", 0);
+//        ArrayList<Customer> bestCustomerList = new ArrayList<>();
+//        bestCustomerList.add(bestCustomer);
+
+        //check the list for the customer with the most tickets
+        for (Customer customer : customerList) {
+
+            if (customer.getNumberOfTickets() > bestCustomer.getNumberOfTickets()) {
+                bestCustomer = customer;
+            }
+        }
+
+        String[] result = { bestCustomer.getCustomer() };
+
+        return ResponseEntity.ok(result);
     }
+
 }
 
 
