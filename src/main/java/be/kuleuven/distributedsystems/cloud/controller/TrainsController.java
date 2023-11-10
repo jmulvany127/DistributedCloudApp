@@ -214,27 +214,40 @@ public class TrainsController {
                     customer.addTickets(length);
                     existingCustomer = true;
                 }
-            }
+            } //if the customer is not already in the list, add them
             if (!existingCustomer){
                 customerList.add(new Customer(customerName, length));
             }
         }
-
-        Customer bestCustomer = new Customer("No customers", 0);
-//        ArrayList<Customer> bestCustomerList = new ArrayList<>();
-//        bestCustomerList.add(bestCustomer);
+        //initialise list for best customer(s)
+        Customer bestCustomer = new Customer("null", 0);
+        ArrayList<Customer> bestCustomerList = new ArrayList<>();
+        bestCustomerList.add(bestCustomer);
 
         //check the list for the customer with the most tickets
         for (Customer customer : customerList) {
-
-            if (customer.getNumberOfTickets() > bestCustomer.getNumberOfTickets()) {
-                bestCustomer = customer;
+            if (bestCustomerList.get(0).getNumberOfTickets() == customer.getNumberOfTickets()) {
+                bestCustomerList.add(customer); //if the customer has the same amount of tickets as current best customer
+            }
+            //if the customer has more tickets than anyone else
+            if (customer.getNumberOfTickets() > bestCustomerList.get(0).getNumberOfTickets()) {
+                bestCustomerList.clear();
+                bestCustomerList.add(customer);
             }
         }
 
-        String[] result = { bestCustomer.getCustomer() };
+        //convert to correct return type
+        String[] customerArray = new String[bestCustomerList.size()];
+        for (int i = 0; i < bestCustomerList.size(); i++) {
+            customerArray[i] = bestCustomerList.get(i).getCustomer();
+        }
 
-        return ResponseEntity.ok(result);
+        //checking case where there is no customers yet
+        if (bestCustomerList.get(0).getCustomer().equals("null")) {
+            return ResponseEntity.ok(new String[] { "No customers have tickets yet" });
+        }
+
+        return ResponseEntity.ok(customerArray);
     }
 
 }
