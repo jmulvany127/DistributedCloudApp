@@ -73,3 +73,6 @@ Issues? Report them at https://github.com/firebase/firebase-tools/issues and att
 [debug] [2023-11-10T18:33:21.977Z] Nov 10, 2023 7:33:21 P.M. com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel
 INFO: Connected to new websocket client
  {"metadata":{"emulator":{"name":"firestore"},"message":"Nov 10, 2023 7:33:21 P.M. com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel\r\nINFO: Connected to new websocket client\r\n"}}
+[debug] [2023-11-10T18:53:06.097Z] Nov 10, 2023 7:53:06 P.M. com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler channelClosed
+INFO: Websocket client disconnected
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Nov 10, 2023 7:53:06 P.M. com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler channelClosed\r\nINFO: Websocket client disconnected\r\n"}}
