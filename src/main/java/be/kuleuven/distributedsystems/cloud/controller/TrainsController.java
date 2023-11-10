@@ -9,6 +9,7 @@ import java.util.*;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.sendgrid.Response;
+import org.springframework.cache.interceptor.CacheInterceptor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -200,12 +201,55 @@ public class TrainsController {
     @GetMapping("api/getBestCustomers")
     public ResponseEntity<?> getBestCustomers() {
         System.out.println("in getBestCustomers");
-        ArrayList<String> customers = new ArrayList<>();
+        ArrayList<Customer> customerList = new ArrayList<>();
 
-        String fakeCustomer = "fake customer";
-        customers.add(fakeCustomer);
-        return ResponseEntity.ok(customers);
+        for (Booking booking : bookings) {
+            String customerName = booking.getCustomer();
+            List<Ticket> tickets = booking.getTickets();
+            int length = tickets.size();
+            boolean existingCustomer = false;
+            //if the customer is already in the list, increase their ticket count
+            for (Customer customer : customerList) {
+                if (customerName.equals(customer.getCustomer())) {
+                    customer.addTickets(length);
+                    existingCustomer = true;
+                }
+            } //if the customer is not already in the list, add them
+            if (!existingCustomer){
+                customerList.add(new Customer(customerName, length));
+            }
+        }
+        //initialise list for best customer(s)
+        Customer bestCustomer = new Customer("null", 0);
+        ArrayList<Customer> bestCustomerList = new ArrayList<>();
+        bestCustomerList.add(bestCustomer);
+
+        //check the list for the customer with the most tickets
+        for (Customer customer : customerList) {
+            if (bestCustomerList.get(0).getNumberOfTickets() == customer.getNumberOfTickets()) {
+                bestCustomerList.add(customer); //if the customer has the same amount of tickets as current best customer
+            }
+            //if the customer has more tickets than anyone else
+            if (customer.getNumberOfTickets() > bestCustomerList.get(0).getNumberOfTickets()) {
+                bestCustomerList.clear();
+                bestCustomerList.add(customer);
+            }
+        }
+
+        //convert to correct return type
+        String[] customerArray = new String[bestCustomerList.size()];
+        for (int i = 0; i < bestCustomerList.size(); i++) {
+            customerArray[i] = bestCustomerList.get(i).getCustomer();
+        }
+
+        //checking case where there is no customers yet
+        if (bestCustomerList.get(0).getCustomer().equals("null")) {
+            return ResponseEntity.ok(new String[] { "No customers have tickets yet" });
+        }
+
+        return ResponseEntity.ok(customerArray);
     }
+
 }
 
 
