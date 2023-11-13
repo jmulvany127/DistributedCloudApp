@@ -3,6 +3,7 @@ package be.kuleuven.distributedsystems.cloud.controller;
 import be.kuleuven.distributedsystems.cloud.entities.*;
 
 import java.awt.print.Book;
+import java.lang.reflect.Array;
 import java.net.http.HttpResponse;
 import java.util.*;
 
@@ -10,6 +11,7 @@ import java.util.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.sendgrid.Response;
 import org.springframework.cache.interceptor.CacheInterceptor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -31,6 +33,8 @@ import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
 public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
+    //private final webClient webClient;
+
     public final ObjectMapper objectMapper;
     private final String ReliableTrainCompany = "https://reliabletrains.com/?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
@@ -43,6 +47,7 @@ public class TrainsController {
     public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
         this.webClientBuilder = webClientBuilder;
+        //this.webClient = webClientBuilder.build();
 
         String ReliableTrainCompany = "reliabletrains.com";
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
@@ -151,6 +156,23 @@ public class TrainsController {
         return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
     }
 
+    //to make a http put request for each ticket, used when converting quotes to a booking
+    public Ticket putTicket(String trainCompany, UUID trainId, UUID seatId, UUID ticketId, String userEmail, String bookingRef) {
+        userEmail = userEmail.replace("\"", "");
+
+        String url = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "/ticket?customer=" + userEmail + "&bookingReference=" +
+                bookingRef + "&" + TrainsKey;
+
+
+        System.out.println(url);
+        Ticket oldticket = webClientBuilder.baseUrl(url).build().put().retrieve().bodyToMono(Ticket.class).block();
+        // fishys line : return webClient.put().uri(url).retrieve().bodyToMono(Ticket.class).block();
+        System.out.println(oldticket.getTrainId());
+        System.out.println(oldticket.getTicketId());
+        //return new Ticket(trainCompany, trainId, seatId, ticketId, userEmail, bookingRef);
+        return oldticket;
+    }
+
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
     @PostMapping("api/confirmQuotes")
     public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
@@ -161,13 +183,37 @@ public class TrainsController {
 
         //for each quote, create a ticket
         quotes.stream().forEach(quote -> {
-            Ticket newTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
+            Ticket oldTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
+            Ticket newTicket = putTicket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
+            System.out.println(newTicket);
+            System.out.println("newticket");
+            System.out.println(newTicket.getTicketId());
+            System.out.println(newTicket.getTrainId());
+            System.out.println(newTicket.getCustomer());
+            System.out.println(newTicket.getTrainCompany());
+            System.out.println(newTicket.getSeatId());
+            System.out.println(newTicket.getBookingReference());
+            System.out.println(newTicket.getClass());
+            System.out.println("oldticket");
+            System.out.println(oldTicket.getTicketId());
+            System.out.println(oldTicket.getTrainId());
+            System.out.println(oldTicket.getCustomer());
+            System.out.println(oldTicket.getTrainCompany());
+            System.out.println(oldTicket.getSeatId());
+            System.out.println(oldTicket.getBookingReference());
+            System.out.println(oldTicket.getClass());
+
+
+            System.out.println(oldTicket);
             tickets.add(newTicket);
         });
 
         //create a booking out of the tickets and add it to the bookings stored locally
         Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
+        System.out.println(booking);
+        System.out.println(tickets);
         bookings.add(booking);
+        System.out.println(booking.getCustomer());
 
         String successMsg = "Successfully submitted";
         return ResponseEntity.status(204).body(successMsg);
@@ -182,11 +228,17 @@ public class TrainsController {
 
         //check for bookings of the current user, adding them to list to be returned
         for (Booking booking : bookings) {
+            System.out.println("nowabouthere");
+            System.out.println(booking.getCustomer());
+            System.out.println(email);
             if (Objects.equals(booking.getCustomer(), email)){
+                System.out.println("this one");
+
+                System.out.println(email);
                 bookingList.add(booking);
             }
         }
-
+        System.out.println(bookingList);
         return ResponseEntity.ok(bookingList);
     }
 
@@ -200,7 +252,6 @@ public class TrainsController {
     //blank function just to check authority, should be easy to complete
     @GetMapping("api/getBestCustomers")
     public ResponseEntity<?> getBestCustomers() {
-        System.out.println("in getBestCustomers");
         ArrayList<Customer> customerList = new ArrayList<>();
 
         for (Booking booking : bookings) {

@@ -41,7 +41,6 @@ public class SecurityFilter extends OncePerRequestFilter {
             //take out the "Bearer" at the start of the string and decode
             String[] authParts = auth.split(" ");
             token = JWT.decode(authParts[1]);
-            System.out.print(token);
             //extract the email and the
             email = String.valueOf(token.getClaim("email"));
             role = String.valueOf(token.getClaim("roles"));
@@ -91,7 +90,6 @@ public class SecurityFilter extends OncePerRequestFilter {
         public Collection<? extends GrantedAuthority> getAuthorities() {
             //if the user is a manager assign them that ROLE
             if (user.isManager()){
-                System.out.println("here");
                 return Collections.singleton(new SimpleGrantedAuthority("ROLE_manager"));
             }
             else //if user is not a manager assign them the user ROLE
