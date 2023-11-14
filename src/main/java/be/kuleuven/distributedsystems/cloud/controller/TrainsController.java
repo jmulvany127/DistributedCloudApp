@@ -3,6 +3,7 @@ package be.kuleuven.distributedsystems.cloud.controller;
 import be.kuleuven.distributedsystems.cloud.entities.*;
 
 import java.awt.print.Book;
+import java.lang.reflect.Array;
 import java.net.http.HttpResponse;
 import java.util.*;
 
@@ -10,6 +11,7 @@ import java.util.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.sendgrid.Response;
 import org.springframework.cache.interceptor.CacheInterceptor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,12 +27,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
+import static java.util.stream.Collectors.groupingBy;
 
 @RestController
 //RequestMapping("api/")
 public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
+    //private final webClient webClient;
+
     public final ObjectMapper objectMapper;
     private final String ReliableTrainCompany = "https://reliabletrains.com/?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
@@ -116,23 +121,44 @@ public class TrainsController {
 
     //gets all available seats, divides them by class and sorts by order and number
     @GetMapping("api/getAvailableSeats")
-    public ResponseEntity<List<List<Seat>>> getAvailableSeats(String trainCompany, String trainId, String time) {
+    public ResponseEntity<Map<String, List<Seat>>> getAvailableSeats(String trainCompany, String trainId, String time) {
         //build the URL to acess seats, then get raw json data
         String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=true&"+TrainsKey;
         String seatsJsonData = getjson(seatsURL);
-        //extracts a list of unsorted seass
+        //extracts a list of unsorted seatss
         List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
-        //split seats into two lists by class, then sort by number, then sort by letter
-        List<List<Seat>> classSeats = TrainFunctions.sortSeats(seats);
+        //sorts seats by number and then letter
+        List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
 
-        return ResponseEntity.ok(classSeats);//JsonData
+        // convert seats list to array
+        Seat[] seatsArray = seats.toArray(new Seat[0]);
+
+        //return seats array grouped by seat type
+        return ResponseEntity.ok(Arrays.stream(seatsArray).collect(groupingBy(Seat::getType)));//JsonData
+    }
+
+    //gets all unavailable seats, used for get seats by ID
+    public ResponseEntity<Map<String, List<Seat>>> getUnavailableSeats(String trainCompany, String trainId, String time) {
+        //build the URL to acess seats, then get raw json data
+        String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=false&"+TrainsKey;
+        String seatsJsonData = getjson(seatsURL);
+        //extracts a list of unsorted seatss
+        List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
+        //sorts seats by number and then letter
+        List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
+
+        // convert seats list to array
+        Seat[] seatsArray = seats.toArray(new Seat[0]);
+
+        //return seats array grouped by seat type
+        return ResponseEntity.ok(Arrays.stream(seatsArray).collect(groupingBy(Seat::getType)));//JsonData
     }
 
     // get an individual seat by its id
     @GetMapping("api/getSeat")
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
 
-        // get a list of all the times
+        // get a list of all the times of a train with train id
         ResponseEntity<?> tempTimes = getTrainTimes(trainCompany, trainId);
         List<String> times = (List<String>) tempTimes.getBody();
         Optional<Seat> seat;
@@ -140,15 +166,32 @@ public class TrainsController {
         // for each instance of a train by time, check all seats for match
         // return error if not found
         for (String time : times) {
-            List<List<Seat>> seats = getAvailableSeats(trainCompany, trainId, time).getBody();
 
-            seat = TrainFunctions.getSeatByID(seatId, seats);
+            Map<String, List<Seat>> availableSeats = getAvailableSeats(trainCompany, trainId, time).getBody();
+            Map<String, List<Seat>> unavailableSeats = getUnavailableSeats(trainCompany, trainId, time).getBody();
+
+            //check available seats using helper function
+            seat = TrainFunctions.getSeatByID(seatId, availableSeats);
+                if (seat.isPresent()) {
+                    return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
+                }
+                //check unavaiable seats using helper function
+            seat = TrainFunctions.getSeatByID(seatId, unavailableSeats);
                 if (seat.isPresent()) {
                     return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
                 }
         }
         String errorMessage = "Seat not found" ;
         return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
+    }
+
+    //to make a http put request for each ticket, used when converting quotes to a booking
+    public Ticket putTicket(String trainCompany, UUID trainId, UUID seatId, UUID ticketId, String userEmail, String bookingRef) {
+        userEmail = userEmail.replace("\"", "");
+        String url = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "/ticket?customer=" + userEmail + "&bookingReference=" +
+                bookingRef + "&" + TrainsKey;
+        Ticket oldticket = webClientBuilder.baseUrl(url).build().put().retrieve().bodyToMono(Ticket.class).block();
+        return oldticket;
     }
 
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
@@ -161,7 +204,8 @@ public class TrainsController {
 
         //for each quote, create a ticket
         quotes.stream().forEach(quote -> {
-            Ticket newTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
+            //Ticket oldTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
+            Ticket newTicket = putTicket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
             tickets.add(newTicket);
         });
 
@@ -186,7 +230,7 @@ public class TrainsController {
                 bookingList.add(booking);
             }
         }
-
+        System.out.println(bookingList);
         return ResponseEntity.ok(bookingList);
     }
 
@@ -200,7 +244,6 @@ public class TrainsController {
     //blank function just to check authority, should be easy to complete
     @GetMapping("api/getBestCustomers")
     public ResponseEntity<?> getBestCustomers() {
-        System.out.println("in getBestCustomers");
         ArrayList<Customer> customerList = new ArrayList<>();
 
         for (Booking booking : bookings) {
