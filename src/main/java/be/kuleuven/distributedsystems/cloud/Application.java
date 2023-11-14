@@ -1,5 +1,7 @@
 package be.kuleuven.distributedsystems.cloud;
 
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FirestoreOptions;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
@@ -55,5 +57,17 @@ public class Application {
         DefaultHttpFirewall firewall = new DefaultHttpFirewall();
         firewall.setAllowUrlEncodedSlash(true);
         return firewall;
+    }
+
+    @Bean
+    public Firestore db() {
+        return FirestoreOptions.getDefaultInstance()
+                .toBuilder()
+                .setProjectId(this.projectId())
+                .setCredentials(new FirestoreOptions.EmulatorCredentials())
+                .setEmulatorHost("localhost:8084")
+                .build()
+                .getService();
+
     }
 }
