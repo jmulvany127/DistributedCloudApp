@@ -68,6 +68,5 @@ public class Application {
                 .setEmulatorHost("localhost:8084")
                 .build()
                 .getService();
-
     }
 }

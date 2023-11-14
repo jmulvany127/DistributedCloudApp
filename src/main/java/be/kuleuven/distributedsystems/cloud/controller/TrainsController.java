@@ -10,6 +10,7 @@ import java.util.*;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.sendgrid.Response;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.interceptor.CacheInterceptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import reactor.core.publisher.Flux;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import be.kuleuven.distributedsystems.cloud.controller.FirestoreController;
 
 import java.time.*;
 
@@ -32,6 +34,7 @@ import static java.util.stream.Collectors.groupingBy;
 public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
+    private final FirestoreController firestoreController;
     public final ObjectMapper objectMapper;
     private final String ReliableTrainCompany = "https://reliabletrains.com/?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
@@ -41,9 +44,11 @@ public class TrainsController {
     private static final Map<String, String> trainCompanies = new HashMap<>();
     private static final ArrayList<Booking> bookings = new ArrayList<>();
 
-    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
+    @Autowired
+    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, FirestoreController firestoreController) {
         this.objectMapper = objectMapper;
         this.webClientBuilder = webClientBuilder;
+        this.firestoreController = firestoreController;
 
         String ReliableTrainCompany = "reliabletrains.com";
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
@@ -81,6 +86,8 @@ public class TrainsController {
 
         //returns the train if found in jsondata, if not returns an empty optional
         Optional<Train> train = TrainFunctions.getTrainByID( trainId, jsonData);
+
+
 
         //checks if train found, if not give error
         if (train.isPresent()) {
@@ -207,7 +214,8 @@ public class TrainsController {
 
         //create a booking out of the tickets and add it to the bookings stored locally
         Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
-        bookings.add(booking);
+        //bookings.add(booking);
+        firestoreController.addBooking(booking);
 
         String successMsg = "Successfully submitted";
         return ResponseEntity.status(204).body(successMsg);
