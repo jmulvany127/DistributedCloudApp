@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.time.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
 import static java.util.stream.Collectors.groupingBy;
@@ -34,8 +32,6 @@ import static java.util.stream.Collectors.groupingBy;
 public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
-    //private final webClient webClient;
-
     public final ObjectMapper objectMapper;
     private final String ReliableTrainCompany = "https://reliabletrains.com/?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
