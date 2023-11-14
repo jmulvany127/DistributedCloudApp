@@ -47,7 +47,6 @@ public class TrainsController {
     public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
         this.webClientBuilder = webClientBuilder;
-        //this.webClient = webClientBuilder.build();
 
         String ReliableTrainCompany = "reliabletrains.com";
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
@@ -133,8 +132,22 @@ public class TrainsController {
         return ResponseEntity.ok(classSeats);//JsonData
     }
 
+    @GetMapping("api/getUnavailableSeats")
+    public ResponseEntity<List<List<Seat>>> getUnavailableSeats(String trainCompany, String trainId, String time) {
+        //build the URL to acess seats, then get raw json data
+        String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=false&"+TrainsKey;
+        String seatsJsonData = getjson(seatsURL);
+        //extracts a list of unsorted seass
+        List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
+        //split seats into two lists by class, then sort by number, then sort by letter
+        List<List<Seat>> classSeats = TrainFunctions.sortSeats(seats);
+
+        return ResponseEntity.ok(classSeats);//JsonData
+    }
+
     // get an individual seat by its id
     @GetMapping("api/getSeat")
+    //TODO: need to return a seat
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
 
         // get a list of all the times
@@ -145,9 +158,14 @@ public class TrainsController {
         // for each instance of a train by time, check all seats for match
         // return error if not found
         for (String time : times) {
-            List<List<Seat>> seats = getAvailableSeats(trainCompany, trainId, time).getBody();
 
+            List<List<Seat>> seats = getAvailableSeats(trainCompany, trainId, time).getBody();
+            List<List<Seat>> seats2 = getUnavailableSeats(trainCompany, trainId, time).getBody();
             seat = TrainFunctions.getSeatByID(seatId, seats);
+                if (seat.isPresent()) {
+                    return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
+                }
+            seat = TrainFunctions.getSeatByID(seatId, seats2);
                 if (seat.isPresent()) {
                     return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
                 }
@@ -159,17 +177,9 @@ public class TrainsController {
     //to make a http put request for each ticket, used when converting quotes to a booking
     public Ticket putTicket(String trainCompany, UUID trainId, UUID seatId, UUID ticketId, String userEmail, String bookingRef) {
         userEmail = userEmail.replace("\"", "");
-
         String url = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "/ticket?customer=" + userEmail + "&bookingReference=" +
                 bookingRef + "&" + TrainsKey;
-
-
-        System.out.println(url);
         Ticket oldticket = webClientBuilder.baseUrl(url).build().put().retrieve().bodyToMono(Ticket.class).block();
-        // fishys line : return webClient.put().uri(url).retrieve().bodyToMono(Ticket.class).block();
-        System.out.println(oldticket.getTrainId());
-        System.out.println(oldticket.getTicketId());
-        //return new Ticket(trainCompany, trainId, seatId, ticketId, userEmail, bookingRef);
         return oldticket;
     }
 
@@ -183,37 +193,14 @@ public class TrainsController {
 
         //for each quote, create a ticket
         quotes.stream().forEach(quote -> {
-            Ticket oldTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
+            //Ticket oldTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
             Ticket newTicket = putTicket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
-            System.out.println(newTicket);
-            System.out.println("newticket");
-            System.out.println(newTicket.getTicketId());
-            System.out.println(newTicket.getTrainId());
-            System.out.println(newTicket.getCustomer());
-            System.out.println(newTicket.getTrainCompany());
-            System.out.println(newTicket.getSeatId());
-            System.out.println(newTicket.getBookingReference());
-            System.out.println(newTicket.getClass());
-            System.out.println("oldticket");
-            System.out.println(oldTicket.getTicketId());
-            System.out.println(oldTicket.getTrainId());
-            System.out.println(oldTicket.getCustomer());
-            System.out.println(oldTicket.getTrainCompany());
-            System.out.println(oldTicket.getSeatId());
-            System.out.println(oldTicket.getBookingReference());
-            System.out.println(oldTicket.getClass());
-
-
-            System.out.println(oldTicket);
             tickets.add(newTicket);
         });
 
         //create a booking out of the tickets and add it to the bookings stored locally
         Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
-        System.out.println(booking);
-        System.out.println(tickets);
         bookings.add(booking);
-        System.out.println(booking.getCustomer());
 
         String successMsg = "Successfully submitted";
         return ResponseEntity.status(204).body(successMsg);
@@ -228,13 +215,7 @@ public class TrainsController {
 
         //check for bookings of the current user, adding them to list to be returned
         for (Booking booking : bookings) {
-            System.out.println("nowabouthere");
-            System.out.println(booking.getCustomer());
-            System.out.println(email);
             if (Objects.equals(booking.getCustomer(), email)){
-                System.out.println("this one");
-
-                System.out.println(email);
                 bookingList.add(booking);
             }
         }
