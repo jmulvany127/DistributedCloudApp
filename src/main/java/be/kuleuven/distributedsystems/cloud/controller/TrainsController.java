@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
+import static java.util.stream.Collectors.groupingBy;
 
 @RestController
 //RequestMapping("api/")
@@ -120,37 +121,44 @@ public class TrainsController {
 
     //gets all available seats, divides them by class and sorts by order and number
     @GetMapping("api/getAvailableSeats")
-    public ResponseEntity<List<List<Seat>>> getAvailableSeats(String trainCompany, String trainId, String time) {
+    public ResponseEntity<Map<String, List<Seat>>> getAvailableSeats(String trainCompany, String trainId, String time) {
         //build the URL to acess seats, then get raw json data
         String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=true&"+TrainsKey;
         String seatsJsonData = getjson(seatsURL);
-        //extracts a list of unsorted seass
+        //extracts a list of unsorted seatss
         List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
-        //split seats into two lists by class, then sort by number, then sort by letter
-        List<List<Seat>> classSeats = TrainFunctions.sortSeats(seats);
+        //sorts seats by number and then letter
+        List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
 
-        return ResponseEntity.ok(classSeats);//JsonData
+        // convert seats list to array
+        Seat[] seatsArray = seats.toArray(new Seat[0]);
+
+        //return seats array grouped by seat type
+        return ResponseEntity.ok(Arrays.stream(seatsArray).collect(groupingBy(Seat::getType)));//JsonData
     }
 
-    @GetMapping("api/getUnavailableSeats")
-    public ResponseEntity<List<List<Seat>>> getUnavailableSeats(String trainCompany, String trainId, String time) {
+    //gets all unavailable seats, used for get seats by ID
+    public ResponseEntity<Map<String, List<Seat>>> getUnavailableSeats(String trainCompany, String trainId, String time) {
         //build the URL to acess seats, then get raw json data
         String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=false&"+TrainsKey;
         String seatsJsonData = getjson(seatsURL);
-        //extracts a list of unsorted seass
+        //extracts a list of unsorted seatss
         List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
-        //split seats into two lists by class, then sort by number, then sort by letter
-        List<List<Seat>> classSeats = TrainFunctions.sortSeats(seats);
+        //sorts seats by number and then letter
+        List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
 
-        return ResponseEntity.ok(classSeats);//JsonData
+        // convert seats list to array
+        Seat[] seatsArray = seats.toArray(new Seat[0]);
+
+        //return seats array grouped by seat type
+        return ResponseEntity.ok(Arrays.stream(seatsArray).collect(groupingBy(Seat::getType)));//JsonData
     }
 
     // get an individual seat by its id
     @GetMapping("api/getSeat")
-    //TODO: need to return a seat
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
 
-        // get a list of all the times
+        // get a list of all the times of a train with train id
         ResponseEntity<?> tempTimes = getTrainTimes(trainCompany, trainId);
         List<String> times = (List<String>) tempTimes.getBody();
         Optional<Seat> seat;
@@ -159,13 +167,16 @@ public class TrainsController {
         // return error if not found
         for (String time : times) {
 
-            List<List<Seat>> seats = getAvailableSeats(trainCompany, trainId, time).getBody();
-            List<List<Seat>> seats2 = getUnavailableSeats(trainCompany, trainId, time).getBody();
-            seat = TrainFunctions.getSeatByID(seatId, seats);
+            Map<String, List<Seat>> availableSeats = getAvailableSeats(trainCompany, trainId, time).getBody();
+            Map<String, List<Seat>> unavailableSeats = getUnavailableSeats(trainCompany, trainId, time).getBody();
+
+            //check available seats using helper function
+            seat = TrainFunctions.getSeatByID(seatId, availableSeats);
                 if (seat.isPresent()) {
                     return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
                 }
-            seat = TrainFunctions.getSeatByID(seatId, seats2);
+                //check unavaiable seats using helper function
+            seat = TrainFunctions.getSeatByID(seatId, unavailableSeats);
                 if (seat.isPresent()) {
                     return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
                 }
