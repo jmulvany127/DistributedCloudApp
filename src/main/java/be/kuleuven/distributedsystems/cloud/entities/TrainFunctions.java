@@ -90,24 +90,7 @@ public class TrainFunctions {
         return seats;
     }
 
-    //divides seats list by class, then sorts by number and then letter
-    public static List<List<Seat>> sortSeats(List<Seat> seats) {
-        List<Seat> firstClass = new ArrayList<>();
-        List<Seat> secondClass = new ArrayList<>();
-        //divides all seats into two new lists
-        for (Seat seat : seats) {
-            if (seat.getType().equals("1st class")) {
-                firstClass.add(seat);
-            } else if (seat.getType().equals("2nd class")) {
-                secondClass.add(seat);
-            }
-        }
-        //creates list of lists, sort then add class based lists
-        List<List<Seat>> splitSeats =new ArrayList<>();
-        splitSeats.add(orderSeats(firstClass));
-        splitSeats.add(orderSeats(secondClass));
-        return splitSeats;
-    }
+
 
     //sorts cseats by number and then letter
     public static List<Seat> orderSeats(List<Seat> seats){
@@ -198,12 +181,14 @@ public class TrainFunctions {
     }
 
     // returns a seat object by its ID from a list of lists of seats, or empty optional of not
-    public static  Optional<Seat> getSeatByID( String seatId, List<List<Seat>> seats){
-        if (seats == null){return Optional.empty();};
-        //check for each list and each seat
-        for (List<Seat> splitSeats: seats) {
-            for (Seat seat : splitSeats) {
+    public static  Optional<Seat> getSeatByID( String seatId, Map<String, List<Seat>> seatMap){
+        if (seatMap == null){return Optional.empty();};
 
+        //extract lists of seats from seat map
+        Collection<List<Seat>> allSeats = seatMap.values();
+        //check for the correct seat its in each list
+        for (List<Seat> classedSeats: allSeats) {
+            for (Seat seat : classedSeats) {
                 if (seat.getSeatId().toString().equals(seatId)) {
                     return Optional.of(seat);
                 }
@@ -211,5 +196,4 @@ public class TrainFunctions {
         }
         return Optional.empty();
     }
-
 }

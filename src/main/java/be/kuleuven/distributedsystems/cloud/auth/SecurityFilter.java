@@ -43,6 +43,7 @@ public class SecurityFilter extends OncePerRequestFilter {
             token = JWT.decode(authParts[1]);
             //extract the email and the
             email = String.valueOf(token.getClaim("email"));
+            email = email.replace("\"", "");
             role = String.valueOf(token.getClaim("roles"));
         }
         //removing the array characters from the string "role"
