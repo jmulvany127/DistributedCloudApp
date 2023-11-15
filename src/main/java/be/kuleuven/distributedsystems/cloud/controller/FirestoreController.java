@@ -7,10 +7,12 @@ import be.kuleuven.distributedsystems.cloud.entities.Ticket;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
 import javax.print.Doc;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
@@ -55,12 +57,10 @@ public class FirestoreController {
         docData.put("time", time.toString());
         docData.put("tickets", ticketAsStrings);
 
-
-
         docRef.set(docData);
     }
 
-    public void getBooking(String bookingId) {
+    public Booking getBooking(String bookingId) {
         DocumentReference docRef = firestore.collection("bookingCollection").document(bookingId);
         ApiFuture<DocumentSnapshot> future = docRef.get();
 
@@ -68,21 +68,34 @@ public class FirestoreController {
             DocumentSnapshot document = future.get();
             if (document.exists()) {
                 System.out.println("document data" + document.getData());
+                List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
+                System.out.println(ticketList);
 
+                UUID bookingRef = UUID.fromString((String) document.get("bookingId"));
+                String customer = (String) document.get("customer");
+                String timeString = (String) document.get("time");
+                LocalDateTime time = LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+                List<Ticket> tickets = new ArrayList<>();
+                for (Map<String, String> ticket : ticketList) {
+                    String ticketBookingRef = ticket.get("bookingRef");
+                    String ticketCustomer = ticket.get("customer");
+                    UUID seatId = UUID.fromString(ticket.get("seatId"));
+                    UUID ticketId = UUID.fromString(ticket.get("ticketId"));
+                    String trainCompany = ticket.get("trainCompany");
+                    UUID trainId = UUID.fromString(ticket.get("trainId"));
+
+                    Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
+                    tickets.add(newTicket);
+                }
+
+                return new Booking(bookingRef, time, tickets, customer);
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
 
-        System.out.println(bookingId);
-        System.out.println(docRef);
-
-
-
-
-
+        throw new RuntimeException("Error when receiving booking");
     }
 
 
