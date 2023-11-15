@@ -72,6 +72,7 @@ public class SubscriberController {
                     .baseUrl(ticketUrl)
                     .build().put().retrieve()
                     .bodyToMono(Ticket.class)
+                    .retry(5)
                     .block();
             tickets.add(ticket);
         }
