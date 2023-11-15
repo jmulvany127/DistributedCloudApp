@@ -234,7 +234,8 @@ public class TrainsController {
                 bookingList.add(booking);
             }
             System.out.println(booking.getId().toString());
-            firestoreController.getBooking(booking.getId().toString());
+            Booking newBooking = firestoreController.getBooking(booking.getId().toString());
+            System.out.println("newBooking" + newBooking);
         }
         System.out.println(bookingList);
 
