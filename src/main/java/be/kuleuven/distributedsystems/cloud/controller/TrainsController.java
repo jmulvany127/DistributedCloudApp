@@ -1,40 +1,20 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
-import be.kuleuven.distributedsystems.cloud.TicketsTopic;
 import be.kuleuven.distributedsystems.cloud.entities.*;
-import be.kuleuven.distributedsystems.cloud.TicketsTopic.*;
 
-import java.awt.print.Book;
-import java.lang.reflect.Array;
-import java.net.http.HttpResponse;
 import java.util.*;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.google.api.core.ApiFuture;
-import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
-import com.sendgrid.Response;
-import org.springframework.cache.interceptor.CacheInterceptor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.threeten.bp.LocalTime;
-import reactor.core.publisher.Flux;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import java.time.*;
 import java.util.concurrent.ExecutionException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
 import static java.util.stream.Collectors.groupingBy;
@@ -44,7 +24,7 @@ import static java.util.stream.Collectors.groupingBy;
 public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
-    //private final webClient webClient;
+
     private final Publisher publisher;
 
     public final ObjectMapper objectMapper;
@@ -211,23 +191,31 @@ public class TrainsController {
         String userEmail = user.getEmail();
         userEmail = userEmail.replace("\"", "");
 
+        List<String> ticketUrlsList = new ArrayList<>();
+
         //for each quote, create a ticket
         String finalUserEmail = userEmail;
         quotes.stream().forEach(quote -> {
-            try {
-                String urlMessage = "https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + finalUserEmail + "&bookingReference=" +
-                        bookingRef + "&" + TrainsKey;
-                ByteString dataMessage = ByteString.copyFromUtf8(urlMessage);
-                PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(dataMessage).build();
+            String ticketUrl = "https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + finalUserEmail + "&bookingReference=" +
+                    bookingRef + "&" + TrainsKey;
+            ticketUrlsList.add(ticketUrl);
+            });
+            ticketUrlsList.add(userEmail);
 
-                ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
-                String messageId = messageIdFuture.get();
-                System.out.println("Published message ID:" + messageId);
 
-            } catch (ExecutionException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
+        try {
+
+            ByteString dataMessage = ByteString.copyFromUtf8(ticketUrlsList.toString());
+            PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(dataMessage).build();
+
+            ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
+            String messageId = messageIdFuture.get();
+            System.out.println("Published message ID:" + messageId);
+
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+
+        }
 
 
         String successMsg = "Booking Request made";
@@ -239,15 +227,7 @@ public class TrainsController {
     public ResponseEntity<?> getBookings() {
         //get the users email
         String email = getUser().getEmail();
-        List<Booking> bookingList = new ArrayList<>();
-
-        //check for bookings of the current user, adding them to list to be returned
-        for (Booking booking : bookings) {
-            if (Objects.equals(booking.getCustomer(), email)){
-                bookingList.add(booking);
-            }
-        }
-        System.out.println(bookingList);
+        List<Booking> bookingList = SubscriberController.getBookings(email);
         return ResponseEntity.ok(bookingList);
     }
 
@@ -310,24 +290,7 @@ public class TrainsController {
         return ResponseEntity.ok(customerArray);
     }
 
-    @PostMapping ("/subscription")
-    public void subscription(@RequestBody String body) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        String data = null;
-        String URL = null;
-        try {
-            JsonNode rootNode = objectMapper.readTree(body);
-            if (rootNode.has("message") && rootNode.get("message").has("data")) {
-                JsonNode dataNode = rootNode.get("message").get("data");
-                data = objectMapper.readValue(dataNode.toString(), String.class);
-                byte[] decodedBytes = Base64.getDecoder().decode(data);
-                URL = new String(decodedBytes);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        System.out.println(URL);
-    }
+    /**/
 
 
 
