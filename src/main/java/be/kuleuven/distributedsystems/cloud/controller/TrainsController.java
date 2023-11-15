@@ -2,9 +2,6 @@ package be.kuleuven.distributedsystems.cloud.controller;
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
 
-import java.awt.print.Book;
-import java.lang.reflect.Array;
-import java.net.http.HttpResponse;
 import java.util.*;
 
 
@@ -13,18 +10,20 @@ import com.sendgrid.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.interceptor.CacheInterceptor;
 import org.springframework.http.HttpStatus;
+import com.google.api.core.ApiFuture;
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.PubsubMessage;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.threeten.bp.LocalTime;
-import reactor.core.publisher.Flux;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import be.kuleuven.distributedsystems.cloud.controller.FirestoreController;
 
 import java.time.*;
+import reactor.core.publisher.Mono;
+import java.util.concurrent.ExecutionException;
 
 import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
 import static java.util.stream.Collectors.groupingBy;
@@ -35,22 +34,27 @@ public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
     private final FirestoreController firestoreController;
+    private final Publisher publisher;
     public final ObjectMapper objectMapper;
-    private final String ReliableTrainCompany = "https://reliabletrains.com/?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
+    private final String UnreliableTrains = "https://unreliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
 
     //key = traincompany name, value = link to their trains, for managing new train companies
     private static final Map<String, String> trainCompanies = new HashMap<>();
 
-    @Autowired
-    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, FirestoreController firestoreController) {
+
+    @Autowired //MIGHT CAUSE PROBLEM?
+    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, FirestoreController firestoreController, Publisher publisher) throws Exception  {
         this.objectMapper = objectMapper;
         this.webClientBuilder = webClientBuilder;
         this.firestoreController = firestoreController;
 
         String ReliableTrainCompany = "reliabletrains.com";
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
+
+        String UnreliableTrainCompany = "unreliabletrains.com";
+        trainCompanies.put(UnreliableTrainCompany, UnreliableTrains);
     }
 
     //returns all the json data from a given URL
@@ -58,20 +62,38 @@ public class TrainsController {
         WebClient webClient = webClientBuilder.baseUrl(URL).build();
 
         //retrieves the jsondataas a string, note as the string is built the thread is blocked
-        String jsonData = webClient.get().retrieve().bodyToMono(String.class).block();
+        String jsonData = webClient
+                .get()
+                .retrieve()
+                .bodyToMono(String.class)
+                .retry(3)
+                .onErrorResume(throwable ->
+                    Mono.empty())// Return empty Mono in case of error
+                .block()
+                ;
 
-        return jsonData;
+        return jsonData != null ? jsonData : "";// Return empty string if jsonData is null
     }
 
     //gets all trains, only reliabletraincompany for now
     @GetMapping("api/getTrains")
-    public ResponseEntity<List<Train>> getallTrains() {
+    public ResponseEntity<?> getallTrains() {
 
         // get json data from the baseurl
         String jsonData = getjson(ReliableTrains);
 
         // Extract train objects from json data
         List<Train> allTrains = TrainFunctions.extractTrains(jsonData);
+
+        jsonData = getjson(UnreliableTrains);
+        //if unreliable trains.com is not reached an empty string will be returned
+        //reliable trains will still be displayed
+        if(jsonData.isEmpty()){
+            System.out.println("UnreliableTrainCompany.com unreachable");
+        }
+        List<Train> unreliableTrains = TrainFunctions.extractTrains(jsonData);
+
+        allTrains.addAll(unreliableTrains);
 
         return ResponseEntity.ok(allTrains);
     }
@@ -82,7 +104,11 @@ public class TrainsController {
         //gets the traincompany/trains URL form hashmap, then use to get json data
         String trainsURL = trainCompanies.get(trainCompany);
         String jsonData = getjson(trainsURL);
-
+        //if unreliable trains.com is not reachable an empty string will be returned, give error
+        if(jsonData.isEmpty()){
+            String errorMessage = (trainCompany+ "is unreachable, return to homepage.");
+            return ResponseEntity.status(500).body(errorMessage);
+        }
         //returns the train if found in jsondata, if not returns an empty optional
         Optional<Train> train = TrainFunctions.getTrainByID( trainId, jsonData);
 
@@ -101,6 +127,11 @@ public class TrainsController {
         //gets the traincompany/trains URL form hashmap, then use to get json data
         String trainsURL = trainCompanies.get(trainCompany);
         String jsonData = getjson(trainsURL);
+        //if unreliable trains.com is not reachable an empty string will be returned, give error
+        if(jsonData.isEmpty()){
+            String errorMessage = (trainCompany+ "is unreachable, return to homepage.");
+            return ResponseEntity.status(500).body(errorMessage);
+        }
         //get the train object by ID
         Optional<Train> train = TrainFunctions.getTrainByID(trainId, jsonData);
 
@@ -121,28 +152,17 @@ public class TrainsController {
 
     //gets all available seats, divides them by class and sorts by order and number
     @GetMapping("api/getAvailableSeats")
-    public ResponseEntity<Map<String, List<Seat>>> getAvailableSeats(String trainCompany, String trainId, String time) {
+    public ResponseEntity<?> getAvailableSeats(String trainCompany, String trainId, String time) {
         //build the URL to acess seats, then get raw json data
         String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=true&"+TrainsKey;
         String seatsJsonData = getjson(seatsURL);
+
+        //if unreliable trains.com is not reachable an empty string will be returned, give error
+        if(seatsJsonData.isEmpty()){
+            String errorMessage = (trainCompany+ "is unreachable, return to homepage.");
+            return ResponseEntity.status(500).body(errorMessage);
+        }
         //extracts a list of unsorted seatss
-        List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
-        //sorts seats by number and then letter
-        List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
-
-        // convert seats list to array
-        Seat[] seatsArray = seats.toArray(new Seat[0]);
-
-        //return seats array grouped by seat type
-        return ResponseEntity.ok(Arrays.stream(seatsArray).collect(groupingBy(Seat::getType)));//JsonData
-    }
-
-    //gets all unavailable seats, used for get seats by ID
-    public ResponseEntity<Map<String, List<Seat>>> getUnavailableSeats(String trainCompany, String trainId, String time) {
-        //build the URL to acess seats, then get raw json data
-        String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=false&"+TrainsKey;
-        String seatsJsonData = getjson(seatsURL);
-        //extracts a list of unsorted seats
         List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
         //sorts seats by number and then letter
         List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
@@ -157,40 +177,26 @@ public class TrainsController {
     // get an individual seat by its id
     @GetMapping("api/getSeat")
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
+        //make seat URl
+        String seatURL = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "?" + TrainsKey;
 
-        // get a list of all the times of a train with train id
-        ResponseEntity<?> tempTimes = getTrainTimes(trainCompany, trainId);
-        List<String> times = (List<String>) tempTimes.getBody();
-        Optional<Seat> seat;
+        WebClient webClient = webClientBuilder.baseUrl(seatURL).build();
+        //get seat, if error seat wil be null
+        Optional<Seat> seat = Optional.ofNullable(webClient
+                .get()
+                .retrieve()
+                .bodyToMono(Seat.class)
+                .retry(3)
+                .onErrorResume(throwable ->
+                        Mono.empty())
+                .block());
 
-        // for each instance of a train by time, check all seats for match, return error if not found
-        for (String time : times) {
-
-            Map<String, List<Seat>> availableSeats = getAvailableSeats(trainCompany, trainId, time).getBody();
-            Map<String, List<Seat>> unavailableSeats = getUnavailableSeats(trainCompany, trainId, time).getBody();
-
-            //check available seats using helper function
-            seat = TrainFunctions.getSeatByID(seatId, availableSeats);
-                if (seat.isPresent()) {
-                    return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
-                }
-                //check unavaiable seats using helper function
-            seat = TrainFunctions.getSeatByID(seatId, unavailableSeats);
-                if (seat.isPresent()) {
-                    return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
-                }
+        if (seat.isPresent()) {
+            return ResponseEntity.ok(seat); // HTTP 200 with the seat as the response body
         }
-        String errorMessage = "Seat not found" ;
-        return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
-    }
 
-    //to make a http put request for each ticket, used when converting quotes to a booking
-    public Ticket putTicket(String trainCompany, UUID trainId, UUID seatId, UUID ticketId, String userEmail, String bookingRef) {
-        userEmail = userEmail.replace("\"", "");
-        String url = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "/ticket?customer=" + userEmail + "&bookingReference=" +
-                bookingRef + "&" + TrainsKey;
-        Ticket ticket = webClientBuilder.baseUrl(url).build().put().retrieve().bodyToMono(Ticket.class).block();
-        return ticket;
+        String errorMessage = "Seat not found";
+        return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
     }
 
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
@@ -200,18 +206,33 @@ public class TrainsController {
         List<Ticket> tickets = new ArrayList<>();
         UUID bookingRef = UUID.randomUUID();
         User user = getUser();
+        String userEmail = user.getEmail();
+        userEmail = userEmail.replace("\"", "");
+
+        List<String> ticketUrlsList = new ArrayList<>();
 
         //for each quote, create a ticket
+        String finalUserEmail = userEmail;
         quotes.stream().forEach(quote -> {
-            Ticket newTicket = putTicket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
-            tickets.add(newTicket);
-        });
+            String ticketUrl = "https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + finalUserEmail + "&bookingReference=" +
+                    bookingRef + "&" + TrainsKey;
+            ticketUrlsList.add(ticketUrl);
+            });
+            ticketUrlsList.add(userEmail);
+      
+        try {
+            ByteString dataMessage = ByteString.copyFromUtf8(ticketUrlsList.toString());
+            PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(dataMessage).build();
 
-        //create a booking out of the tickets and add it to the bookings stored locally
-        Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
-        firestoreController.addBooking(booking);
+            ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
+            String messageId = messageIdFuture.get();
+            System.out.println("Published message ID:" + messageId);
 
-        String successMsg = "Successfully submitted";
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        String successMsg = "Booking Request made";
         return ResponseEntity.status(204).body(successMsg);
     }
 
@@ -228,6 +249,7 @@ public class TrainsController {
                 bookingList.add(booking);
             }
         }
+
         return ResponseEntity.ok(bookingList);
     }
 
@@ -289,7 +311,6 @@ public class TrainsController {
         }
         return ResponseEntity.ok(customerArray);
     }
-}
 
 
 
