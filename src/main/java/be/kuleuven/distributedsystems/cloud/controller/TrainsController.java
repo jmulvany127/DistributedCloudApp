@@ -245,7 +245,8 @@ public class TrainsController {
     // returns all the bookings
     @GetMapping("api/getAllBookings")
     public ResponseEntity<?> getAllBookings() {
-        List<Booking> bookingList = new ArrayList<>(bookings);
+        //List<Booking> bookingList = new ArrayList<>(bookings);
+        List<Booking> bookingList = firestoreController.getAllBookings();
         return ResponseEntity.ok(bookingList);
     }
 
