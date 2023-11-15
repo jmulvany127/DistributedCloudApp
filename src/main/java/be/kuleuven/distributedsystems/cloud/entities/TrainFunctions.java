@@ -25,17 +25,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 public class TrainFunctions {
-    private final WebClient.Builder webClientBuilder;
+
     public final ObjectMapper objectMapper;
     private final String ReliableTrainCompany = "https://reliabletrains.com/?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String TrainEg = "https://reliabletrains.com/trains/c3c7dec3-4901-48ce-970d-dd9418ed9bcf?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
 
-    public TrainFunctions(WebClient.Builder webClientBuilder, ObjectMapper objectMapper){
+    public TrainFunctions(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        this.webClientBuilder = webClientBuilder;
-
     }
+
     public static List<Train> extractTrains(String jsonData) {
         List<Train> trains = new ArrayList<>();
         //takes json data and converts it to objects
@@ -68,7 +67,7 @@ public class TrainFunctions {
         //takes json data and converts it to objects
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        //prevnts the mapper from failing when it envounters an unkown json field
+        //prevents the mapper from failing when it envounters an unkown json field
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         try {
@@ -92,11 +91,10 @@ public class TrainFunctions {
     }
 
 
-
-    //sorts cseats by number and then letter
-    public static List<Seat> orderSeats(List<Seat> seats){
+    //sorts seats by number and then letter
+    public static List<Seat> orderSeats(List<Seat> seats) {
         //sorts by number
-        Comparator<Seat> seatNumComparator= new Comparator<Seat>() {
+        Comparator<Seat> seatNumComparator = new Comparator<Seat>() {
             @Override
             public int compare(Seat seat1, Seat seat2) {
                 //isolate seat number in string
@@ -106,26 +104,28 @@ public class TrainFunctions {
                 int seat1Num = Integer.parseInt(seat1Name);
                 int seat2Num = Integer.parseInt(seat2Name);
                 //Compare in ascending order
-                return seat1Num-seat2Num;
+                return seat1Num - seat2Num;
             }
         };
         Collections.sort(seats, seatNumComparator);
 
         //sort by letter
-        Comparator<Seat> seatLetterComparator= new Comparator<Seat>() {
+        Comparator<Seat> seatLetterComparator = new Comparator<Seat>() {
             @Override
             public int compare(Seat seat1, Seat seat2) {
                 String seat1Name = seat1.getName();
                 String seat2Name = seat2.getName();
                 // if seat number is equal the sort by letter, if not leave as
-                if (seat1Name.replaceAll("[a-zA-Z]", "").equals(seat2Name.replaceAll("[a-zA-Z]", "")) ){
+                if (seat1Name.replaceAll("[a-zA-Z]", "").equals(seat2Name.replaceAll("[a-zA-Z]", ""))) {
                     //isolate seat letter in string
-                    seat1Name = seat1Name.replaceAll("[1-9]","");
-                    seat2Name = seat2Name.replaceAll("[1-9]","");
+                    seat1Name = seat1Name.replaceAll("[1-9]", "");
+                    seat2Name = seat2Name.replaceAll("[1-9]", "");
 
                     //compare in ascending order
                     return seat1Name.compareTo(seat2Name);
-                }else{return 0;}
+                } else {
+                    return 0;
+                }
             }
         };
         Collections.sort(seats, seatLetterComparator);
@@ -149,7 +149,7 @@ public class TrainFunctions {
             JsonNode stringList = rootNode.at("/_embedded/stringList");
 
             ///get time as a string, parse to date time object and then sort by date and time
-            for(JsonNode jsonTime: stringList){
+            for (JsonNode jsonTime : stringList) {
                 String stringTime = jsonTime.asText();
                 LocalDateTime time = LocalDateTime.parse(stringTime, formatter);
                 dateTimeList.add(time);
@@ -168,8 +168,8 @@ public class TrainFunctions {
         return times;
     }
 
-// returns a train object by its ID from json data, or empty optional of not
-    public static  Optional<Train> getTrainByID( String trainId, String jsonData){
+    // returns a train object by its ID from json data, or empty optional of not
+    public static Optional<Train> getTrainByID(String trainId, String jsonData) {
         // Extract train objects from json data
         List<Train> allTrains = TrainFunctions.extractTrains(jsonData);
         // check for matching train, if not found return empty optional
@@ -181,20 +181,6 @@ public class TrainFunctions {
         return Optional.empty();
     }
 
-    // returns a seat object by its ID from a list of lists of seats, or empty optional of not
-    public static  Optional<Seat> getSeatByID( String seatId, Map<String, List<Seat>> seatMap){
-        if (seatMap == null){return Optional.empty();};
-
-        //extract lists of seats from seat map
-        Collection<List<Seat>> allSeats = seatMap.values();
-        //check for the correct seat its in each list
-        for (List<Seat> classedSeats: allSeats) {
-            for (Seat seat : classedSeats) {
-                if (seat.getSeatId().toString().equals(seatId)) {
-                    return Optional.of(seat);
-                }
-            }
-        }
-        return Optional.empty();
-    }
 }
+
+
