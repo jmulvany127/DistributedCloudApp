@@ -43,12 +43,12 @@ public class TrainsController {
     //key = traincompany name, value = link to their trains, for managing new train companies
     private static final Map<String, String> trainCompanies = new HashMap<>();
 
-
     @Autowired //MIGHT CAUSE PROBLEM?
-    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, FirestoreController firestoreController, Publisher publisher) throws Exception  {
+    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, FirestoreController firestoreController, Publisher publisher) throws Exception {
         this.objectMapper = objectMapper;
         this.webClientBuilder = webClientBuilder;
         this.firestoreController = firestoreController;
+        this.publisher = publisher;
 
         String ReliableTrainCompany = "reliabletrains.com";
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
@@ -68,9 +68,8 @@ public class TrainsController {
                 .bodyToMono(String.class)
                 .retry(3)
                 .onErrorResume(throwable ->
-                    Mono.empty())// Return empty Mono in case of error
-                .block()
-                ;
+                        Mono.empty())// Return empty Mono in case of error
+                .block();
 
         return jsonData != null ? jsonData : "";// Return empty string if jsonData is null
     }
@@ -88,7 +87,7 @@ public class TrainsController {
         jsonData = getjson(UnreliableTrains);
         //if unreliable trains.com is not reached an empty string will be returned
         //reliable trains will still be displayed
-        if(jsonData.isEmpty()){
+        if (jsonData.isEmpty()) {
             System.out.println("UnreliableTrainCompany.com unreachable");
         }
         List<Train> unreliableTrains = TrainFunctions.extractTrains(jsonData);
@@ -105,18 +104,18 @@ public class TrainsController {
         String trainsURL = trainCompanies.get(trainCompany);
         String jsonData = getjson(trainsURL);
         //if unreliable trains.com is not reachable an empty string will be returned, give error
-        if(jsonData.isEmpty()){
-            String errorMessage = (trainCompany+ "is unreachable, return to homepage.");
+        if (jsonData.isEmpty()) {
+            String errorMessage = (trainCompany + "is unreachable, return to homepage.");
             return ResponseEntity.status(500).body(errorMessage);
         }
         //returns the train if found in jsondata, if not returns an empty optional
-        Optional<Train> train = TrainFunctions.getTrainByID( trainId, jsonData);
+        Optional<Train> train = TrainFunctions.getTrainByID(trainId, jsonData);
 
         //checks if train found, if not give error
         if (train.isPresent()) {
             return ResponseEntity.ok(train); // HTTP 200 with the train as the response body
-        }else {
-            String errorMessage = "Train not found" ;
+        } else {
+            String errorMessage = "Train not found";
             return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
         }
     }
@@ -128,8 +127,8 @@ public class TrainsController {
         String trainsURL = trainCompanies.get(trainCompany);
         String jsonData = getjson(trainsURL);
         //if unreliable trains.com is not reachable an empty string will be returned, give error
-        if(jsonData.isEmpty()){
-            String errorMessage = (trainCompany+ "is unreachable, return to homepage.");
+        if (jsonData.isEmpty()) {
+            String errorMessage = (trainCompany + "is unreachable, return to homepage.");
             return ResponseEntity.status(500).body(errorMessage);
         }
         //get the train object by ID
@@ -138,7 +137,7 @@ public class TrainsController {
         //checks if train found, if not give error
         if (train.isPresent()) {
             //build the URL to acess times, then get raw json data
-            String timesURL = "https://" + trainCompany + "/trains/" + trainId +"/times?" + TrainsKey;
+            String timesURL = "https://" + trainCompany + "/trains/" + trainId + "/times?" + TrainsKey;
             String timesJsonData = getjson(timesURL);
             //get the list of times from the raw json data
             List<String> trainTimes = TrainFunctions.extractTrainTimes(timesJsonData);
@@ -154,12 +153,12 @@ public class TrainsController {
     @GetMapping("api/getAvailableSeats")
     public ResponseEntity<?> getAvailableSeats(String trainCompany, String trainId, String time) {
         //build the URL to acess seats, then get raw json data
-        String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=true&"+TrainsKey;
+        String seatsURL = "https://" + trainCompany + "/trains/" + trainId + "/seats?time=" + time + "&available=true&" + TrainsKey;
         String seatsJsonData = getjson(seatsURL);
 
         //if unreliable trains.com is not reachable an empty string will be returned, give error
-        if(seatsJsonData.isEmpty()){
-            String errorMessage = (trainCompany+ "is unreachable, return to homepage.");
+        if (seatsJsonData.isEmpty()) {
+            String errorMessage = (trainCompany + "is unreachable, return to homepage.");
             return ResponseEntity.status(500).body(errorMessage);
         }
         //extracts a list of unsorted seatss
@@ -217,9 +216,9 @@ public class TrainsController {
             String ticketUrl = "https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + finalUserEmail + "&bookingReference=" +
                     bookingRef + "&" + TrainsKey;
             ticketUrlsList.add(ticketUrl);
-            });
-            ticketUrlsList.add(userEmail);
-      
+        });
+        ticketUrlsList.add(userEmail);
+
         try {
             ByteString dataMessage = ByteString.copyFromUtf8(ticketUrlsList.toString());
             PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(dataMessage).build();
@@ -245,11 +244,10 @@ public class TrainsController {
 
         //check for bookings of the current user, adding them to list to be returned
         for (Booking booking : allBookings) {
-            if (Objects.equals(booking.getCustomer(), email)){
+            if (Objects.equals(booking.getCustomer(), email)) {
                 bookingList.add(booking);
             }
         }
-
         return ResponseEntity.ok(bookingList);
     }
 
@@ -279,7 +277,7 @@ public class TrainsController {
                     existingCustomer = true;
                 }
             } //if the customer is not already in the list, add them
-            if (!existingCustomer){
+            if (!existingCustomer) {
                 customerList.add(new Customer(customerName, length));
             }
         }
@@ -307,10 +305,11 @@ public class TrainsController {
         }
         //checking case where there is no customers yet
         if (bestCustomerList.get(0).getCustomer().equals("null")) {
-            return ResponseEntity.ok(new String[] { "No customers have tickets yet" });
+            return ResponseEntity.ok(new String[]{"No customers have tickets yet"});
         }
         return ResponseEntity.ok(customerArray);
     }
+}
 
 
 
