@@ -11,6 +11,7 @@ import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
 import javax.print.Doc;
+import java.awt.print.Book;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -72,9 +73,9 @@ public class FirestoreController {
                 System.out.println(ticketList);
 
                 UUID bookingRef = UUID.fromString((String) document.get("bookingId"));
-                String customer = (String) document.get("customer");
                 String timeString = (String) document.get("time");
                 LocalDateTime time = LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                String customer = (String) document.get("customer");
 
                 List<Ticket> tickets = new ArrayList<>();
                 for (Map<String, String> ticket : ticketList) {
@@ -96,6 +97,45 @@ public class FirestoreController {
         }
 
         throw new RuntimeException("Error when receiving booking");
+    }
+
+    public List<Booking> getAllBookings() {
+        CollectionReference docRef = firestore.collection("bookingCollection");
+        ApiFuture<QuerySnapshot> querySnapshot = docRef.get();
+
+        try {
+            List<Booking> bookings = new ArrayList<>();
+            for (DocumentSnapshot document : querySnapshot.get().getDocuments()){
+                System.out.println("LOOOOOP" + document);
+                Booking newBooking = documentToBooking(document);
+                bookings.add(newBooking);
+            }
+            return bookings;
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Booking documentToBooking(DocumentSnapshot document) {
+        List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
+        UUID bookingRef = UUID.fromString((String) document.get("bookingId"));
+        String timeString = (String) document.get("time");
+        LocalDateTime time = LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        String customer = (String) document.get("customer");
+
+        List<Ticket> tickets = new ArrayList<>();
+        for (Map<String, String> ticket : ticketList) {
+            String ticketBookingRef = ticket.get("bookingRef");
+            String ticketCustomer = ticket.get("customer");
+            UUID seatId = UUID.fromString(ticket.get("seatId"));
+            UUID ticketId = UUID.fromString(ticket.get("ticketId"));
+            String trainCompany = ticket.get("trainCompany");
+            UUID trainId = UUID.fromString(ticket.get("trainId"));
+
+            Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
+            tickets.add(newTicket);
+        }
+        return new Booking(bookingRef, time, tickets, customer);
     }
 
 
