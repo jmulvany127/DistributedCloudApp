@@ -1,5 +1,15 @@
 package be.kuleuven.distributedsystems.cloud;
 
+import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
+import com.google.api.gax.grpc.GrpcTransportChannel;
+import com.google.api.gax.rpc.FixedTransportChannelProvider;
+import com.google.api.gax.rpc.TransportChannelProvider;
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.Subscriber;
+import com.google.pubsub.v1.ProjectSubscriptionName;
+import com.google.pubsub.v1.TopicName;
+import io.grpc.ManagedChannelBuilder;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
@@ -20,6 +30,7 @@ import java.util.Objects;
 @SpringBootApplication
 public class Application {
 
+
     @SuppressWarnings("unchecked")
     public static void main(String[] args) throws IOException {
         System.setProperty("server.port", System.getenv().getOrDefault("PORT", "8080"));
@@ -29,6 +40,28 @@ public class Application {
         // TODO: (level 2) load this data into Firestore
         String data = new String(new ClassPathResource("data.json").getInputStream().readAllBytes());
     }
+
+
+    @Bean
+    public Publisher publisher() throws IOException {
+        TransportChannelProvider channelProvider = FixedTransportChannelProvider.create(
+                    GrpcTransportChannel.create(
+                         ManagedChannelBuilder. forTarget("localhost:8083").usePlaintext().build()));
+        CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
+        String projectId = "demo-distributed-systems-kul";
+        String topicId = "putTicketRequest";
+        TopicName topicName = TopicName.of(projectId, topicId);
+        return Publisher
+                    .newBuilder(topicName)
+                    .setChannelProvider(channelProvider)
+                    .setCredentialsProvider(credentialsProvider)
+                    .build();
+    }
+
+
+
+
+
 
     @Bean
     public boolean isProduction() {
