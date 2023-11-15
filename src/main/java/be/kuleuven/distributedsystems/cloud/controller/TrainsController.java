@@ -1,6 +1,8 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
+import be.kuleuven.distributedsystems.cloud.TicketsTopic;
 import be.kuleuven.distributedsystems.cloud.entities.*;
+import be.kuleuven.distributedsystems.cloud.TicketsTopic.*;
 
 import java.awt.print.Book;
 import java.lang.reflect.Array;
@@ -8,7 +10,13 @@ import java.net.http.HttpResponse;
 import java.util.*;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.google.api.core.ApiFuture;
+import com.google.cloud.pubsub.v1.AckReplyConsumer;
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.PubsubMessage;
 import com.sendgrid.Response;
 import org.springframework.cache.interceptor.CacheInterceptor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +31,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.time.*;
+import java.util.concurrent.ExecutionException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +45,7 @@ public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
     //private final webClient webClient;
+    private final Publisher publisher;
 
     public final ObjectMapper objectMapper;
     private final String ReliableTrainCompany = "https://reliabletrains.com/?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
@@ -45,9 +56,11 @@ public class TrainsController {
     private static final Map<String, String> trainCompanies = new HashMap<>();
     private static final ArrayList<Booking> bookings = new ArrayList<>();
 
-    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
+    public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, Publisher publisher) throws Exception {
         this.objectMapper = objectMapper;
         this.webClientBuilder = webClientBuilder;
+        this.publisher = publisher;
+
 
         String ReliableTrainCompany = "reliabletrains.com";
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
@@ -185,14 +198,8 @@ public class TrainsController {
         return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
     }
 
-    //to make a http put request for each ticket, used when converting quotes to a booking
-    public Ticket putTicket(String trainCompany, UUID trainId, UUID seatId, UUID ticketId, String userEmail, String bookingRef) {
-        userEmail = userEmail.replace("\"", "");
-        String url = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "/ticket?customer=" + userEmail + "&bookingReference=" +
-                bookingRef + "&" + TrainsKey;
-        Ticket oldticket = webClientBuilder.baseUrl(url).build().put().retrieve().bodyToMono(Ticket.class).block();
-        return oldticket;
-    }
+
+
 
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
     @PostMapping("api/confirmQuotes")
@@ -201,19 +208,29 @@ public class TrainsController {
         List<Ticket> tickets = new ArrayList<>();
         UUID bookingRef = UUID.randomUUID();
         User user = getUser();
+        String userEmail = user.getEmail();
+        userEmail = userEmail.replace("\"", "");
 
         //for each quote, create a ticket
+        String finalUserEmail = userEmail;
         quotes.stream().forEach(quote -> {
-            //Ticket oldTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
-            Ticket newTicket = putTicket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
-            tickets.add(newTicket);
+            try {
+                String urlMessage = "https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + finalUserEmail + "&bookingReference=" +
+                        bookingRef + "&" + TrainsKey;
+                ByteString dataMessage = ByteString.copyFromUtf8(urlMessage);
+                PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(dataMessage).build();
+
+                ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
+                String messageId = messageIdFuture.get();
+                System.out.println("Published message ID:" + messageId);
+
+            } catch (ExecutionException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         });
 
-        //create a booking out of the tickets and add it to the bookings stored locally
-        Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
-        bookings.add(booking);
 
-        String successMsg = "Successfully submitted";
+        String successMsg = "Booking Request made";
         return ResponseEntity.status(204).body(successMsg);
     }
 
@@ -292,6 +309,27 @@ public class TrainsController {
 
         return ResponseEntity.ok(customerArray);
     }
+
+    @PostMapping ("/subscription")
+    public void subscription(@RequestBody String body) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        String data = null;
+        String URL = null;
+        try {
+            JsonNode rootNode = objectMapper.readTree(body);
+            if (rootNode.has("message") && rootNode.get("message").has("data")) {
+                JsonNode dataNode = rootNode.get("message").get("data");
+                data = objectMapper.readValue(dataNode.toString(), String.class);
+                byte[] decodedBytes = Base64.getDecoder().decode(data);
+                URL = new String(decodedBytes);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println(URL);
+    }
+
+
 
 }
 
