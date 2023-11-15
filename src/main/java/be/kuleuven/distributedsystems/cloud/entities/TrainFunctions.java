@@ -74,10 +74,10 @@ public class TrainFunctions {
         try {
             // Parse the JSON data into a JSON node
             JsonNode rootNode = objectMapper.readTree(jsonData);
-            //gets the embedded node and then the seats node from the root
-            JsonNode seatsNode = rootNode.get("_embedded").get("seats");
             //not sure if neccessayr will test
             if (rootNode.has("_embedded") && rootNode.get("_embedded").has("seats")) {
+                //gets the embedded node and then the seats node from the root
+                JsonNode seatsNode = rootNode.get("_embedded").get("seats");
                 for (JsonNode seatNode : seatsNode) {
                     // Deserialize each seat jsonobject into a seat object and add to seats
                     Seat seat = objectMapper.readValue(seatNode.toString(), Seat.class);
