@@ -42,7 +42,6 @@ public class TrainsController {
 
     //key = traincompany name, value = link to their trains, for managing new train companies
     private static final Map<String, String> trainCompanies = new HashMap<>();
-    private static final ArrayList<Booking> bookings = new ArrayList<>();
 
     @Autowired
     public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, FirestoreController firestoreController) {
@@ -86,8 +85,6 @@ public class TrainsController {
 
         //returns the train if found in jsondata, if not returns an empty optional
         Optional<Train> train = TrainFunctions.getTrainByID( trainId, jsonData);
-
-
 
         //checks if train found, if not give error
         if (train.isPresent()) {
@@ -145,7 +142,7 @@ public class TrainsController {
         //build the URL to acess seats, then get raw json data
         String seatsURL = "https://"+trainCompany+"/trains/"+trainId+"/seats?time="+time+"&available=false&"+TrainsKey;
         String seatsJsonData = getjson(seatsURL);
-        //extracts a list of unsorted seatss
+        //extracts a list of unsorted seats
         List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
         //sorts seats by number and then letter
         List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
@@ -166,8 +163,7 @@ public class TrainsController {
         List<String> times = (List<String>) tempTimes.getBody();
         Optional<Seat> seat;
 
-        // for each instance of a train by time, check all seats for match
-        // return error if not found
+        // for each instance of a train by time, check all seats for match, return error if not found
         for (String time : times) {
 
             Map<String, List<Seat>> availableSeats = getAvailableSeats(trainCompany, trainId, time).getBody();
@@ -193,8 +189,8 @@ public class TrainsController {
         userEmail = userEmail.replace("\"", "");
         String url = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "/ticket?customer=" + userEmail + "&bookingReference=" +
                 bookingRef + "&" + TrainsKey;
-        Ticket oldticket = webClientBuilder.baseUrl(url).build().put().retrieve().bodyToMono(Ticket.class).block();
-        return oldticket;
+        Ticket ticket = webClientBuilder.baseUrl(url).build().put().retrieve().bodyToMono(Ticket.class).block();
+        return ticket;
     }
 
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
@@ -207,14 +203,12 @@ public class TrainsController {
 
         //for each quote, create a ticket
         quotes.stream().forEach(quote -> {
-            //Ticket oldTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
             Ticket newTicket = putTicket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(), UUID.randomUUID(), user.getEmail(), bookingRef.toString());
             tickets.add(newTicket);
         });
 
         //create a booking out of the tickets and add it to the bookings stored locally
         Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
-        //bookings.add(booking);
         firestoreController.addBooking(booking);
 
         String successMsg = "Successfully submitted";
@@ -224,7 +218,6 @@ public class TrainsController {
     // get all the bookings from a specific user
     @GetMapping("api/getBookings")
     public ResponseEntity<?> getBookings() {
-        //get the users email
         String email = getUser().getEmail();
         List<Booking> allBookings = firestoreController.getAllBookings();
         List<Booking> bookingList = new ArrayList<>();
@@ -234,12 +227,7 @@ public class TrainsController {
             if (Objects.equals(booking.getCustomer(), email)){
                 bookingList.add(booking);
             }
-            //System.out.println(booking.getId().toString());
-            //Booking newBooking = firestoreController.getBooking(booking.getId().toString());
-            //System.out.println("newBooking" + newBooking);
         }
-        //System.out.println(bookingList);
-
         return ResponseEntity.ok(bookingList);
     }
 
@@ -255,6 +243,7 @@ public class TrainsController {
     @GetMapping("api/getBestCustomers")
     public ResponseEntity<?> getBestCustomers() {
         ArrayList<Customer> customerList = new ArrayList<>();
+        List<Booking> bookings = firestoreController.getAllBookings();
 
         for (Booking booking : bookings) {
             String customerName = booking.getCustomer();
@@ -294,15 +283,12 @@ public class TrainsController {
         for (int i = 0; i < bestCustomerList.size(); i++) {
             customerArray[i] = bestCustomerList.get(i).getCustomer();
         }
-
         //checking case where there is no customers yet
         if (bestCustomerList.get(0).getCustomer().equals("null")) {
             return ResponseEntity.ok(new String[] { "No customers have tickets yet" });
         }
-
         return ResponseEntity.ok(customerArray);
     }
-
 }
 
 

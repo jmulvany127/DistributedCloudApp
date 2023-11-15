@@ -1,17 +1,11 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
-import static java.util.stream.Collectors.groupingBy;
-
 import be.kuleuven.distributedsystems.cloud.entities.Booking;
 import be.kuleuven.distributedsystems.cloud.entities.Ticket;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
-
-import javax.print.Doc;
-import java.awt.print.Book;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -31,15 +25,15 @@ public class FirestoreController {
         return firestore.collection("bookingsCol").document("bookingsDoc");
     }
 
-    public void  addBooking(Booking booking) {
+    public void addBooking(Booking booking) {
         DocumentReference docRef = firestore.collection("bookingCollection").document(booking.getId().toString());
-
+        //extract fields from booking
         UUID id = booking.getId();
         LocalDateTime time = booking.getTime();
         List<Ticket> tickets = booking.getTickets();
         String customer = booking.getCustomer();
 
-        //convert all the ticket data to string for storage in db
+        //create tickets with fields as strings so they can be stored in db
         List<Map<String, String>> ticketAsStrings = new ArrayList<>();
         for (Ticket ticket : tickets) {
             Map<String, String> ticketData = new HashMap<>();
@@ -52,12 +46,13 @@ public class FirestoreController {
             ticketAsStrings.add(ticketData);
         }
 
+        //create data object with fields of the booking to store in db
         Map<String, Object> docData = new HashMap<>();
         docData.put("bookingId", id.toString());
         docData.put("customer", customer);
         docData.put("time", time.toString());
         docData.put("tickets", ticketAsStrings);
-
+        //store in db
         docRef.set(docData);
     }
 
@@ -66,18 +61,19 @@ public class FirestoreController {
         ApiFuture<DocumentSnapshot> future = docRef.get();
 
         try {
+            //get document from the db
             DocumentSnapshot document = future.get();
             if (document.exists()) {
-                System.out.println("document data" + document.getData());
+                //extract data from different fields of the document
                 List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
-                System.out.println(ticketList);
-
                 UUID bookingRef = UUID.fromString((String) document.get("bookingId"));
                 String timeString = (String) document.get("time");
                 LocalDateTime time = LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
                 String customer = (String) document.get("customer");
 
+                //list to store tickets from the db
                 List<Ticket> tickets = new ArrayList<>();
+                //extract ticket data from document
                 for (Map<String, String> ticket : ticketList) {
                     String ticketBookingRef = ticket.get("bookingRef");
                     String ticketCustomer = ticket.get("customer");
@@ -85,17 +81,15 @@ public class FirestoreController {
                     UUID ticketId = UUID.fromString(ticket.get("ticketId"));
                     String trainCompany = ticket.get("trainCompany");
                     UUID trainId = UUID.fromString(ticket.get("trainId"));
-
+                    //create local version of the ticket with extracted data and add to the list
                     Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
                     tickets.add(newTicket);
                 }
-
                 return new Booking(bookingRef, time, tickets, customer);
             }
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
-
         throw new RuntimeException("Error when receiving booking");
     }
 
@@ -104,9 +98,10 @@ public class FirestoreController {
         ApiFuture<QuerySnapshot> querySnapshot = docRef.get();
 
         try {
+            //list to hold local bookings
             List<Booking> bookings = new ArrayList<>();
+            //for each document create a local booking to be returned
             for (DocumentSnapshot document : querySnapshot.get().getDocuments()){
-                System.out.println("LOOOOOP" + document);
                 Booking newBooking = documentToBooking(document);
                 bookings.add(newBooking);
             }
@@ -117,13 +112,16 @@ public class FirestoreController {
     }
 
     private Booking documentToBooking(DocumentSnapshot document) {
+        //extract data from the fields of the document
         List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
         UUID bookingRef = UUID.fromString((String) document.get("bookingId"));
         String timeString = (String) document.get("time");
         LocalDateTime time = LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         String customer = (String) document.get("customer");
 
+        //list to store tickets from the db
         List<Ticket> tickets = new ArrayList<>();
+        //extract ticket data from document
         for (Map<String, String> ticket : ticketList) {
             String ticketBookingRef = ticket.get("bookingRef");
             String ticketCustomer = ticket.get("customer");
@@ -131,15 +129,10 @@ public class FirestoreController {
             UUID ticketId = UUID.fromString(ticket.get("ticketId"));
             String trainCompany = ticket.get("trainCompany");
             UUID trainId = UUID.fromString(ticket.get("trainId"));
-
+            //create local ticket with extracted data and add to the ticket list
             Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
             tickets.add(newTicket);
         }
         return new Booking(bookingRef, time, tickets, customer);
     }
-
-
 }
-
-
-
