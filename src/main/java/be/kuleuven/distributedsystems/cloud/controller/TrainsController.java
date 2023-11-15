@@ -214,7 +214,7 @@ public class TrainsController {
 
         //create a booking out of the tickets and add it to the bookings stored locally
         Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, user.getEmail());
-        bookings.add(booking);
+        //bookings.add(booking);
         firestoreController.addBooking(booking);
 
         String successMsg = "Successfully submitted";
@@ -226,18 +226,19 @@ public class TrainsController {
     public ResponseEntity<?> getBookings() {
         //get the users email
         String email = getUser().getEmail();
+        List<Booking> allBookings = firestoreController.getAllBookings();
         List<Booking> bookingList = new ArrayList<>();
 
         //check for bookings of the current user, adding them to list to be returned
-        for (Booking booking : bookings) {
+        for (Booking booking : allBookings) {
             if (Objects.equals(booking.getCustomer(), email)){
                 bookingList.add(booking);
             }
-            System.out.println(booking.getId().toString());
-            Booking newBooking = firestoreController.getBooking(booking.getId().toString());
-            System.out.println("newBooking" + newBooking);
+            //System.out.println(booking.getId().toString());
+            //Booking newBooking = firestoreController.getBooking(booking.getId().toString());
+            //System.out.println("newBooking" + newBooking);
         }
-        System.out.println(bookingList);
+        //System.out.println(bookingList);
 
         return ResponseEntity.ok(bookingList);
     }
