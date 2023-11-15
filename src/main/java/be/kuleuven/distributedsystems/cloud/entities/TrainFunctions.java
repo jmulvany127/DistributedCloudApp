@@ -73,7 +73,6 @@ public class TrainFunctions {
         try {
             // Parse the JSON data into a JSON node
             JsonNode rootNode = objectMapper.readTree(jsonData);
-            //gets the embedded node and then the seats node from the root
 
             //not sure if neccessayr will test
             if (rootNode.has("_embedded") && rootNode.get("_embedded").has("seats")) {

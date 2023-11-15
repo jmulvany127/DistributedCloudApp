@@ -1,5 +1,7 @@
 package be.kuleuven.distributedsystems.cloud;
 
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FirestoreOptions;
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
@@ -88,5 +90,16 @@ public class Application {
         DefaultHttpFirewall firewall = new DefaultHttpFirewall();
         firewall.setAllowUrlEncodedSlash(true);
         return firewall;
+    }
+
+    @Bean
+    public Firestore db() {
+        return FirestoreOptions.getDefaultInstance()
+                .toBuilder()
+                .setProjectId(this.projectId())
+                .setCredentials(new FirestoreOptions.EmulatorCredentials())
+                .setEmulatorHost("localhost:8084")
+                .build()
+                .getService();
     }
 }
