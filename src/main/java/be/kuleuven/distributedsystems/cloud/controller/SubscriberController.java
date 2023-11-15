@@ -2,12 +2,13 @@ package be.kuleuven.distributedsystems.cloud.controller;
 
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
-
+import be.kuleuven.distributedsystems.cloud.controller.*;
 
 import java.util.*;
 import java.time.*;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -21,12 +22,15 @@ import static java.util.stream.Collectors.groupingBy;
 public class SubscriberController {
     //@RequestBody String body
     private final WebClient.Builder webClientBuilder;
+    private final FirestoreController firestoreController;
 
     //to be stored on firestore
     private static final ArrayList<Booking> bookings = new ArrayList<>();
 
-    public SubscriberController(WebClient.Builder webClientBuilder) {
+    @Autowired
+    public SubscriberController(WebClient.Builder webClientBuilder, FirestoreController firestoreController) {
         this.webClientBuilder = webClientBuilder;
+        this.firestoreController = firestoreController;
     }
 
     //receives a json String containing an embedded pub sub message
@@ -55,7 +59,6 @@ public class SubscriberController {
     }
 
     public void createBooking(String rawTicketsUrls){
-
         //list of tickets to be turned into a booking
         List<Ticket> tickets = new ArrayList<>();
 
@@ -78,26 +81,24 @@ public class SubscriberController {
         }
         //create booking from received tickets under the corresponding userand add to temp local list
         Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, userEmail);
-        bookings.add(booking);
+        firestoreController.addBooking(booking);
     }
-
-
 
     //get bookings from booking list for a particular user
-    public static List<Booking>getBookings(String userEmail){
-
-        List<Booking> bookingList = new ArrayList<>();
-
-        //check for bookings of the current user, adding them to list to be returned
-        for (Booking booking : bookings) {
-            if (Objects.equals(booking.getCustomer(), userEmail)){
-                bookingList.add(booking);
-            }
-        }
-        System.out.println(bookingList);
-        return bookingList;
-
-    }
+//    public static List<Booking>getBookings(String userEmail){
+//
+//        List<Booking> bookingList = new ArrayList<>();
+//
+//        //check for bookings of the current user, adding them to list to be returned
+//        for (Booking booking : bookings) {
+//            if (Objects.equals(booking.getCustomer(), userEmail)){
+//                bookingList.add(booking);
+//            }
+//        }
+//        System.out.println(bookingList);
+//        return bookingList;
+//
+//    }
 }
 
 

@@ -21,10 +21,6 @@ public class FirestoreController {
         this.firestore = firestore;
     }
 
-    public DocumentReference getDocumentReference() {
-        return firestore.collection("bookingsCol").document("bookingsDoc");
-    }
-
     public void addBooking(Booking booking) {
         DocumentReference docRef = firestore.collection("bookingCollection").document(booking.getId().toString());
         //extract fields from booking
