@@ -1,12 +1,8 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
-
 import be.kuleuven.distributedsystems.cloud.entities.*;
-import be.kuleuven.distributedsystems.cloud.controller.*;
-
 import java.util.*;
 import java.time.*;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,19 +12,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.reactive.function.client.WebClientException;
 
-import static java.util.stream.Collectors.groupingBy;
 
 //operates as local subscriber in emulated pub sub system
 @RestController
 public class SubscriberController {
-    //@RequestBody String body
     private final WebClient.Builder webClientBuilder;
     private final FirestoreController firestoreController;
     private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
-
-
-    //to be stored on firestore
-    private static final ArrayList<Booking> bookings = new ArrayList<>();
 
     @Autowired
     public SubscriberController(WebClient.Builder webClientBuilder, FirestoreController firestoreController) {
@@ -100,9 +90,3 @@ public class SubscriberController {
         }
     }
 }
-
-
-
-
-
-
