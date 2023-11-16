@@ -75,10 +75,11 @@ public class SubscriberController {
                     .baseUrl(ticketUrl)
                     .build().put().retrieve()
                     .bodyToMono(Ticket.class)
-                    .retry(5)
+                    .retry(3)
                     .block();
             tickets.add(ticket);
         }
+        
         //create booking from received tickets under the corresponding userand add to temp local list
         Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, userEmail);
         firestoreController.addBooking(booking);
