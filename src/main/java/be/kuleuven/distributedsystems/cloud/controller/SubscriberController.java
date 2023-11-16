@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.reactive.function.client.WebClientException;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -23,6 +24,8 @@ public class SubscriberController {
     //@RequestBody String body
     private final WebClient.Builder webClientBuilder;
     private final FirestoreController firestoreController;
+    private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
+
 
     //to be stored on firestore
     private static final ArrayList<Booking> bookings = new ArrayList<>();
@@ -58,6 +61,12 @@ public class SubscriberController {
         return ResponseEntity.status(200).body(errorMessage);
     }
 
+    public Ticket deleteTicket(Ticket ticket) {
+        String url = "https://" + ticket.getTrainCompany() + "/trains/" + ticket.getTrainId() + "/seats/" + ticket.getSeatId() + "/ticket/"
+                     + ticket.getTicketId() + "?" + TrainsKey;
+        return webClientBuilder.baseUrl(url).build().delete().retrieve().bodyToMono(Ticket.class).block();
+    }
+
     public void createBooking(String rawTicketsUrls){
         //list of tickets to be turned into a booking
         List<Ticket> tickets = new ArrayList<>();
@@ -70,36 +79,26 @@ public class SubscriberController {
         ticketsUrlList.remove(ticketsUrlList.size()-1);
 
         //create a put request for every ticket URL and store the resulting ticket
-        for (String ticketUrl: ticketsUrlList) {
-            Ticket ticket = webClientBuilder
-                    .baseUrl(ticketUrl)
-                    .build().put().retrieve()
-                    .bodyToMono(Ticket.class)
-                    .retry(3)
-                    .block();
-            tickets.add(ticket);
+        try {
+            for (String ticketUrl: ticketsUrlList) {
+                Ticket ticket = webClientBuilder
+                        .baseUrl(ticketUrl)
+                        .build().put().retrieve()
+                        .bodyToMono(Ticket.class)
+                        .retry(3)
+                        .block();
+                tickets.add(ticket);
+            }
+            //create booking from received tickets under the corresponding userand add to temp local list
+            Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, userEmail);
+            firestoreController.addBooking(booking);
+        } catch (WebClientException e) {
+            //if the tickets are not available due to someone else bookings them, release the previously booked tickets
+            for (Ticket ticket : tickets) {
+                deleteTicket(ticket);
+            }
         }
-        
-        //create booking from received tickets under the corresponding userand add to temp local list
-        Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, userEmail);
-        firestoreController.addBooking(booking);
     }
-
-    //get bookings from booking list for a particular user
-//    public static List<Booking>getBookings(String userEmail){
-//
-//        List<Booking> bookingList = new ArrayList<>();
-//
-//        //check for bookings of the current user, adding them to list to be returned
-//        for (Booking booking : bookings) {
-//            if (Objects.equals(booking.getCustomer(), userEmail)){
-//                bookingList.add(booking);
-//            }
-//        }
-//        System.out.println(bookingList);
-//        return bookingList;
-//
-//    }
 }
 
 
