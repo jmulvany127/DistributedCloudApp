@@ -61,10 +61,6 @@ public class Application {
     }
 
 
-
-
-
-
     @Bean
     public boolean isProduction() {
         return Objects.equals(System.getenv("GAE_ENV"), "standard");

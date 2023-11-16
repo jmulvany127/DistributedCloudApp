@@ -28,7 +28,7 @@ public class SecurityFilter extends OncePerRequestFilter {
         String auth = extractTokenFromRequest(request);
         DecodedJWT token = null;
         String email = null;
-        //make every user have the "user" role by default
+        //make every user have the "user" role by defaultFilt
         String role = "user";
 
 
