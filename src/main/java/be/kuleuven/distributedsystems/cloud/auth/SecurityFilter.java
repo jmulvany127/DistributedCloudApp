@@ -7,7 +7,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.http.protocol.ResponseContent;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,12 +14,9 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 import java.util.Collection;
-
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
@@ -57,12 +53,7 @@ public class SecurityFilter extends OncePerRequestFilter {
         context.setAuthentication(new FirebaseAuthentication(otheruser));
         filterChain.doFilter(request, response);
 
-
         // TODO: (level 2) verify Identity Token
-        //var otheruser = new User("test@example.com", new String[]{});   //old code that was given
-        //SecurityContext context = SecurityContextHolder.getContext();
-        //context.setAuthentication(new FirebaseAuthentication(otheruser));
-
     }
 
     private String extractTokenFromRequest(HttpServletRequest request) {
@@ -78,7 +69,6 @@ public class SecurityFilter extends OncePerRequestFilter {
     public static User getUser() {
         return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
-
 
     private static class FirebaseAuthentication implements Authentication {
         private final User user;
@@ -119,7 +109,6 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         @Override
         public void setAuthenticated(boolean b) throws IllegalArgumentException {
-
         }
 
         @Override
@@ -128,4 +117,3 @@ public class SecurityFilter extends OncePerRequestFilter {
         }
     }
 }
-

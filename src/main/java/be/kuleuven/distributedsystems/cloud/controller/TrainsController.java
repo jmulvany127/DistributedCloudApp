@@ -1,15 +1,8 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
-
 import java.util.*;
-
-
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.sendgrid.Response;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.interceptor.CacheInterceptor;
-import org.springframework.http.HttpStatus;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.protobuf.ByteString;
@@ -18,18 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import be.kuleuven.distributedsystems.cloud.controller.FirestoreController;
-
-import java.time.*;
 import reactor.core.publisher.Mono;
 import java.util.concurrent.ExecutionException;
-
 import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
 import static java.util.stream.Collectors.groupingBy;
 
+
 @RestController
-//RequestMapping("api/")
 public class TrainsController {
 
     private final WebClient.Builder webClientBuilder;
@@ -39,11 +27,9 @@ public class TrainsController {
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String UnreliableTrains = "https://unreliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
-
-    //key = traincompany name, value = link to their trains, for managing new train companies
     private static final Map<String, String> trainCompanies = new HashMap<>();
 
-    @Autowired //MIGHT CAUSE PROBLEM?
+    @Autowired
     public TrainsController(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, FirestoreController firestoreController, Publisher publisher) throws Exception {
         this.objectMapper = objectMapper;
         this.webClientBuilder = webClientBuilder;
@@ -52,7 +38,6 @@ public class TrainsController {
 
         String ReliableTrainCompany = "reliabletrains.com";
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
-
         String UnreliableTrainCompany = "unreliabletrains.com";
         trainCompanies.put(UnreliableTrainCompany, UnreliableTrains);
     }
@@ -93,7 +78,6 @@ public class TrainsController {
         List<Train> unreliableTrains = TrainFunctions.extractTrains(jsonData);
 
         allTrains.addAll(unreliableTrains);
-
         return ResponseEntity.ok(allTrains);
     }
 
@@ -142,7 +126,6 @@ public class TrainsController {
             //get the list of times from the raw json data
             List<String> trainTimes = TrainFunctions.extractTrainTimes(timesJsonData);
             return ResponseEntity.ok(trainTimes);
-
         } else {
             String errorMessage = "Train not found";
             return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
@@ -230,7 +213,6 @@ public class TrainsController {
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
-
         String successMsg = "Booking Request made";
         return ResponseEntity.status(204).body(successMsg);
     }
@@ -310,6 +292,3 @@ public class TrainsController {
         return ResponseEntity.ok(customerArray);
     }
 }
-
-
-
