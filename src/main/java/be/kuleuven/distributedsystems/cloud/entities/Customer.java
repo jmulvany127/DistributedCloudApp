@@ -24,5 +24,4 @@ public class Customer {
     public void addTickets(int number) {
         numberOfTickets = numberOfTickets + number;
     }
-
 }

@@ -1,7 +1,5 @@
 package be.kuleuven.distributedsystems.cloud.auth;
 
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.FirestoreOptions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,6 +32,4 @@ public class SecurityConfiguration {
         http.addFilterBefore(this.securityFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
-
-
 }

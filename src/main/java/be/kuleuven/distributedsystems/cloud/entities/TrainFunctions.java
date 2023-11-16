@@ -1,26 +1,9 @@
 package be.kuleuven.distributedsystems.cloud.entities;
 
-import be.kuleuven.distributedsystems.cloud.entities.Booking;
-import be.kuleuven.distributedsystems.cloud.entities.Quote;
-import be.kuleuven.distributedsystems.cloud.entities.Seat;
-import be.kuleuven.distributedsystems.cloud.entities.Ticket;
-import be.kuleuven.distributedsystems.cloud.entities.Train;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.sendgrid.Response;
-import org.springframework.http.ResponseEntity;
-import org.springframework.util.Assert;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import reactor.core.publisher.Flux;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -131,7 +114,6 @@ public class TrainFunctions {
         return seats;
     }
 
-
     public static List<String> extractTrainTimes(String jsonData) {
         List<String> times = new ArrayList<>();
         //takes json data and converts it to objects
@@ -179,7 +161,4 @@ public class TrainFunctions {
         }
         return Optional.empty();
     }
-
 }
-
-
