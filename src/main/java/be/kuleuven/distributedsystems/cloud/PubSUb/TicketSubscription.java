@@ -36,7 +36,6 @@ public class TicketSubscription {
     public static void createPushSubscription(
             String projectId, String subscriptionId, String topicId, String pushEndpoint, ManagedChannel channel)
             throws IOException {
-                try (SubscriptionAdminClient subscriptionAdminClient = SubscriptionAdminClient.create()) {
                     // Set the channel and credentials provider when creating a `SubscriptionAdminClient
                     TransportChannelProvider channelProvider =
                             FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
@@ -61,6 +60,5 @@ public class TicketSubscription {
                     Subscription subscription =
                             subscriptionClient.createSubscription(subscriptionName, topicName, pushConfig, 60);
                     System.out.println("Created push subscription: " + subscription.getName());
-        }
-    }
+            }
 }
