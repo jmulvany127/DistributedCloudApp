@@ -51,7 +51,7 @@ public class TrainsController {
                 .get()
                 .retrieve()
                 .bodyToMono(String.class)
-                .retry(5)
+                .retry(9)
                 .onErrorResume(throwable ->
                         Mono.empty())// Return empty Mono in case of error
                 .block();
@@ -168,7 +168,7 @@ public class TrainsController {
                 .get()
                 .retrieve()
                 .bodyToMono(Seat.class)
-                .retry(3)
+                .retry(9)
                 .onErrorResume(throwable ->
                         Mono.empty())
                 .block());
