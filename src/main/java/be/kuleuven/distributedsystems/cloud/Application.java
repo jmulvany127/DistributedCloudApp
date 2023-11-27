@@ -46,17 +46,11 @@ public class Application {
 
     @Bean
     public Publisher publisher() throws IOException {
-        TransportChannelProvider channelProvider = FixedTransportChannelProvider.create(
-                    GrpcTransportChannel.create(
-                         ManagedChannelBuilder. forTarget("localhost:8083").usePlaintext().build()));
-        CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
-        String projectId = "demo-distributed-systems-kul";
-        String topicId = "putTicketRequest";
+        String projectId = "fos-jm-cloud-app";
+        String topicId = "confirmBookingRequest";
         TopicName topicName = TopicName.of(projectId, topicId);
         return Publisher
                     .newBuilder(topicName)
-                    .setChannelProvider(channelProvider)
-                    .setCredentialsProvider(credentialsProvider)
                     .build();
     }
 
@@ -68,7 +62,7 @@ public class Application {
 
     @Bean
     public String projectId() {
-        return "demo-distributed-systems-kul";
+        return "fos-jm-cloud-app";
     }
 
     /*

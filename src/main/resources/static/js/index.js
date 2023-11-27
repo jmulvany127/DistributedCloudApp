@@ -27,7 +27,13 @@ if (location.hostname === "localhost") {
   };
 } else {
   firebaseConfig = {
-    // TODO: for level 2, paste your config here
+     apiKey: "AIzaSyCImL3QklOWF5gBFGsiWunXsKtcFkIp2qI",
+      authDomain: "fos-jm-cloud-app.firebaseapp.com",
+      projectId: "fos-jm-cloud-app",
+      storageBucket: "fos-jm-cloud-app.appspot.com",
+      messagingSenderId: "121364572044",
+      appId: "1:121364572044:web:fbfb8e75d16034781698a9",
+      measurementId: "G-8NZQ05SD61"
   };
 }
 

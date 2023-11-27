@@ -67,7 +67,7 @@ public class SubscriberController {
         List<String> ticketsUrlList =  new ArrayList<>(Arrays.asList(ticketsUrlArray));
         String userEmail = ticketsUrlList.get(ticketsUrlList.size()-1);
         ticketsUrlList.remove(ticketsUrlList.size()-1);
-
+        System.out.println("print 1 ");
         //create a put request for every ticket URL and store the resulting ticket
         try {
             for (String ticketUrl: ticketsUrlList) {
@@ -79,9 +79,11 @@ public class SubscriberController {
                         .block();
                 tickets.add(ticket);
             }
+            System.out.println("print 2 ");
             //create booking from received tickets under the corresponding userand add to temp local list
             Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, userEmail);
             firestoreController.addBooking(booking);
+            System.out.println("print 3 ");
         } catch (WebClientException e) {
             //if the tickets are not available due to someone else bookings them, release the previously booked tickets
             for (Ticket ticket : tickets) {
