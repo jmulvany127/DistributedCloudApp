@@ -1,5 +1,6 @@
 package be.kuleuven.distributedsystems.cloud;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import com.google.api.gax.core.CredentialsProvider;
@@ -83,12 +84,11 @@ public class Application {
     }
 
     @Bean
-    public Firestore db() {
+    public Firestore db() throws IOException {
         return FirestoreOptions.getDefaultInstance()
                 .toBuilder()
                 .setProjectId(this.projectId())
-                .setCredentials(new FirestoreOptions.EmulatorCredentials())
-                .setEmulatorHost("localhost:8084")
+                .setCredentials(GoogleCredentials.getApplicationDefault())
                 .build()
                 .getService();
     }

@@ -48,6 +48,7 @@ public class SubscriberController {
         }
         createBooking(rawticketsUrls);
         String errorMessage = "Confirm Quote request received" ;
+        System.out.println("Confirm Quote request received");
         return ResponseEntity.status(200).body(errorMessage);
     }
 

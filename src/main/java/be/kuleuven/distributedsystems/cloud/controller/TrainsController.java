@@ -211,8 +211,10 @@ public class TrainsController {
             System.out.println("Published message ID:" + messageId);
 
         } catch (ExecutionException | InterruptedException e) {
+            System.out.println("catchblock 1");
             throw new RuntimeException(e);
         }
+        System.out.println("Booking Request made");
         String successMsg = "Booking Request made";
         return ResponseEntity.status(204).body(successMsg);
     }
@@ -221,7 +223,9 @@ public class TrainsController {
     @GetMapping("api/getBookings")
     public ResponseEntity<?> getBookings() {
         String email = getUser().getEmail();
+        System.out.println("in get train bookings 1");
         List<Booking> allBookings = firestoreController.getAllBookings();
+        System.out.println("in get train bookings 2");
         List<Booking> bookingList = new ArrayList<>();
 
         //check for bookings of the current user, adding them to list to be returned
@@ -230,6 +234,7 @@ public class TrainsController {
                 bookingList.add(booking);
             }
         }
+        System.out.println("in get train bookings 3");
         return ResponseEntity.ok(bookingList);
     }
 

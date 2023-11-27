@@ -23,6 +23,7 @@ public class FirestoreController {
 
     public void addBooking(Booking booking) {
         DocumentReference docRef = firestore.collection("bookingCollection").document(booking.getId().toString());
+        System.out.println("in firestore add bookings 1");
         //extract fields from booking
         UUID id = booking.getId();
         LocalDateTime time = booking.getTime();
@@ -41,7 +42,7 @@ public class FirestoreController {
             ticketData.put("trainId", ticket.getTrainId().toString());
             ticketAsStrings.add(ticketData);
         }
-
+        System.out.println("in firestore add bookings 2");
         //create data object with fields of the booking to store in db
         Map<String, Object> docData = new HashMap<>();
         docData.put("bookingId", id.toString());
@@ -50,15 +51,17 @@ public class FirestoreController {
         docData.put("tickets", ticketAsStrings);
         //store in db
         docRef.set(docData);
+        System.out.println("in firestore add bookings 3");
     }
 
     public Booking getBooking(String bookingId) {
         DocumentReference docRef = firestore.collection("bookingCollection").document(bookingId);
         ApiFuture<DocumentSnapshot> future = docRef.get();
-
+        System.out.println("in firestore get bookings 1");
         try {
             //get document from the db
             DocumentSnapshot document = future.get();
+            System.out.println("in firestore get bookings 2");
             if (document.exists()) {
                 //extract data from different fields of the document
                 List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
@@ -70,6 +73,7 @@ public class FirestoreController {
                 //list to store tickets from the db
                 List<Ticket> tickets = new ArrayList<>();
                 //extract ticket data from document
+                System.out.println("in firestore get bookings 3");
                 for (Map<String, String> ticket : ticketList) {
                     String ticketBookingRef = ticket.get("bookingRef");
                     String ticketCustomer = ticket.get("customer");
@@ -84,6 +88,7 @@ public class FirestoreController {
                 return new Booking(bookingRef, time, tickets, customer);
             }
         } catch (InterruptedException | ExecutionException e) {
+            System.out.println("in firestore get bookings runtime");
             throw new RuntimeException(e);
         }
         throw new RuntimeException("Error when receiving booking");
