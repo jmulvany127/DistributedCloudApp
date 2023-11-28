@@ -22,31 +22,18 @@ public class FirestoreController {
     }
 
     public void addBooking(Booking booking) {
-        DocumentReference docRef = firestore.collection("bookingCollection").document(booking.getId().toString());
+        DocumentReference docRef = firestore.collection("bookingCollection").document(booking.getId());
         //extract fields from booking
         String id = booking.getId();
         String time = booking.getTime();
         List<Ticket> tickets = booking.getTickets();
         String customer = booking.getCustomer();
 
-        //create tickets with fields as strings so they can be stored in db
-        List<Map<String, String>> ticketAsStrings = new ArrayList<>();
-        for (Ticket ticket : tickets) {
-            Map<String, String> ticketData = new HashMap<>();
-            ticketData.put("seatId", ticket.getSeatId().toString());
-            ticketData.put("ticketId", ticket.getTicketId().toString());
-            ticketData.put("customer", ticket.getCustomer());
-            ticketData.put("trainCompany", ticket.getTrainCompany());
-            ticketData.put("bookingRef", ticket.getBookingReference());
-            ticketData.put("trainId", ticket.getTrainId().toString());
-            ticketAsStrings.add(ticketData);
-        }
-
         //create data object with fields of the booking to store in db
         Map<String, Object> docData = new HashMap<>();
-        docData.put("bookingId", id.toString());
+        docData.put("bookingId", id);
         docData.put("customer", customer);
-        docData.put("time", time.toString());
+        docData.put("time", time);
         docData.put("tickets", tickets);
         //store in db
         docRef.set(docData);
@@ -56,33 +43,18 @@ public class FirestoreController {
         DocumentReference docRef = firestore.collection("bookingCollection").document(bookingId);
         ApiFuture<DocumentSnapshot> future = docRef.get();
 
-
         try {
             //get document from the db
             DocumentSnapshot document = future.get();
             if (document.exists()) {
                 //extract data from different fields of the document
-                List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
+                List<Ticket> ticketList = (List<Ticket>) document.get("tickets");
                 String bookingRef = (String) document.get("bookingId");
                 String timeString = (String) document.get("time");
                 String time = String.valueOf(LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                 String customer = (String) document.get("customer");
 
-                //list to store tickets from the db
-                List<Ticket> tickets = new ArrayList<>();
-                //extract ticket data from document
-                for (Map<String, String> ticket : ticketList) {
-                    String ticketBookingRef = ticket.get("bookingRef");
-                    String ticketCustomer = ticket.get("customer");
-                    String seatId = ticket.get("seatId");
-                    String ticketId = ticket.get("ticketId");
-                    String trainCompany = ticket.get("trainCompany");
-                    String trainId = ticket.get("trainId");
-                    //create local version of the ticket with extracted data and add to the list
-                    Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
-                    tickets.add(newTicket);
-                }
-                return new Booking(bookingRef, time, tickets, customer);
+                return new Booking(bookingRef, time, ticketList, customer);
             }
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
@@ -110,28 +82,4 @@ public class FirestoreController {
         }
     }
 
-    private Booking documentToBooking(DocumentSnapshot document) {
-        //extract data from the fields of the document
-        List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
-        String bookingRef = (String) document.get("bookingId");
-        String timeString = (String) document.get("time");
-        String time = String.valueOf(LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        String customer = (String) document.get("customer");
-
-        //list to store tickets from the db
-        List<Ticket> tickets = new ArrayList<>();
-        //extract ticket data from document
-        for (Map<String, String> ticket : ticketList) {
-            String ticketBookingRef = ticket.get("bookingRef");
-            String ticketCustomer = ticket.get("customer");
-            String seatId = ticket.get("seatId");
-            String ticketId = ticket.get("ticketId");
-            String trainCompany = ticket.get("trainCompany");
-            String trainId = ticket.get("trainId");
-            //create local ticket with extracted data and add to the ticket list
-            Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
-            tickets.add(newTicket);
-        }
-        return new Booking(bookingRef, time, tickets, customer);
-    }
 }
