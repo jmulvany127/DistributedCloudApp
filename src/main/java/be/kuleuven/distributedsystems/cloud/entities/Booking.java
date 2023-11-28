@@ -10,23 +10,26 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class Booking {
-    private UUID id;
-    private LocalDateTime time;
+    private String id;
+    private String time;
     private List<Ticket> tickets;
     private String customer;
 
-    public Booking(UUID id, LocalDateTime time, List<Ticket> tickets, String customer) {
+    //to allow .toObject call with firestore
+    public Booking(){}
+
+    public Booking(String id, String time, List<Ticket> tickets, String customer) {
         this.id = id;
         this.time = time;
         this.tickets = tickets;
         this.customer = customer;
     }
 
-    public UUID getId() {
+    public String getId() {
         return this.id;
     }
 
-    public LocalDateTime getTime() {
+    public String getTime() {
         return this.time;
     }
 

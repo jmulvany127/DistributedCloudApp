@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public class Train {
     private String trainCompany;
-    private UUID trainId;
+    private String trainId;
     private String name;
     private String location;
     private String image;
@@ -12,7 +12,7 @@ public class Train {
     public Train() {
     }
 
-    public Train(String trainCompany, UUID trainId, String name, String location, String image) {
+    public Train(String trainCompany, String trainId, String name, String location, String image) {
         this.trainCompany = trainCompany;
         this.trainId = trainId;
         this.name = name;
@@ -24,7 +24,7 @@ public class Train {
         return trainCompany;
     }
 
-    public UUID getTrainId() {
+    public String getTrainId() {
         return trainId;
     }
 
