@@ -5,9 +5,9 @@ import java.util.UUID;
 
 public class Seat {
     private String trainCompany;
-    private UUID trainId;
-    private UUID seatId;
-    private LocalDateTime time;
+    private String trainId;
+    private String seatId;
+    private String time;
     private String type;
     private String name;
     private double price;
@@ -15,7 +15,7 @@ public class Seat {
     public Seat() {
     }
 
-    public Seat(String trainCompany, UUID trainId, UUID seatId, LocalDateTime time, String type, String name, double price) {
+    public Seat(String trainCompany, String trainId, String seatId, String time, String type, String name, double price) {
         this.trainCompany = trainCompany;
         this.trainId = trainId;
         this.seatId = seatId;
@@ -29,15 +29,15 @@ public class Seat {
         return trainCompany;
     }
 
-    public UUID getTrainId() {
+    public String getTrainId() {
         return trainId;
     }
 
-    public UUID getSeatId() {
+    public String getSeatId() {
         return this.seatId;
     }
 
-    public LocalDateTime getTime() {
+    public String getTime() {
         return this.time;
     }
 

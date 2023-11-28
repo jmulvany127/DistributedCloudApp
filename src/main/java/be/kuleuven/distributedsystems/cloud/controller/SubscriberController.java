@@ -80,7 +80,7 @@ public class SubscriberController {
                 tickets.add(ticket);
             }
             //create booking from received tickets under the corresponding userand add to temp local list
-            Booking booking = new Booking(UUID.randomUUID(), LocalDateTime.now(), tickets, userEmail);
+            Booking booking = new Booking(UUID.randomUUID().toString(), LocalDateTime.now().toString(), tickets, userEmail);
             firestoreController.addBooking(booking);
         } catch (WebClientException e) {
             //if the tickets are not available due to someone else bookings them, release the previously booked tickets

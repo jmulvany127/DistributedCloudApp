@@ -24,8 +24,8 @@ public class FirestoreController {
     public void addBooking(Booking booking) {
         DocumentReference docRef = firestore.collection("bookingCollection").document(booking.getId().toString());
         //extract fields from booking
-        UUID id = booking.getId();
-        LocalDateTime time = booking.getTime();
+        String id = booking.getId();
+        String time = booking.getTime();
         List<Ticket> tickets = booking.getTickets();
         String customer = booking.getCustomer();
 
@@ -47,7 +47,7 @@ public class FirestoreController {
         docData.put("bookingId", id.toString());
         docData.put("customer", customer);
         docData.put("time", time.toString());
-        docData.put("tickets", ticketAsStrings);
+        docData.put("tickets", tickets);
         //store in db
         docRef.set(docData);
     }
@@ -56,15 +56,16 @@ public class FirestoreController {
         DocumentReference docRef = firestore.collection("bookingCollection").document(bookingId);
         ApiFuture<DocumentSnapshot> future = docRef.get();
 
+
         try {
             //get document from the db
             DocumentSnapshot document = future.get();
             if (document.exists()) {
                 //extract data from different fields of the document
                 List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
-                UUID bookingRef = UUID.fromString((String) document.get("bookingId"));
+                String bookingRef = (String) document.get("bookingId");
                 String timeString = (String) document.get("time");
-                LocalDateTime time = LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                String time = String.valueOf(LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                 String customer = (String) document.get("customer");
 
                 //list to store tickets from the db
@@ -73,10 +74,10 @@ public class FirestoreController {
                 for (Map<String, String> ticket : ticketList) {
                     String ticketBookingRef = ticket.get("bookingRef");
                     String ticketCustomer = ticket.get("customer");
-                    UUID seatId = UUID.fromString(ticket.get("seatId"));
-                    UUID ticketId = UUID.fromString(ticket.get("ticketId"));
+                    String seatId = ticket.get("seatId");
+                    String ticketId = ticket.get("ticketId");
                     String trainCompany = ticket.get("trainCompany");
-                    UUID trainId = UUID.fromString(ticket.get("trainId"));
+                    String trainId = ticket.get("trainId");
                     //create local version of the ticket with extracted data and add to the list
                     Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
                     tickets.add(newTicket);
@@ -93,12 +94,14 @@ public class FirestoreController {
         CollectionReference docRef = firestore.collection("bookingCollection");
         ApiFuture<QuerySnapshot> querySnapshot = docRef.get();
 
+        System.out.println(docRef);
+
         try {
             //list to hold local bookings
             List<Booking> bookings = new ArrayList<>();
             //for each document create a local booking to be returned
             for (DocumentSnapshot document : querySnapshot.get().getDocuments()){
-                Booking newBooking = documentToBooking(document);
+                Booking newBooking = document.toObject(Booking.class);
                 bookings.add(newBooking);
             }
             return bookings;
@@ -110,9 +113,9 @@ public class FirestoreController {
     private Booking documentToBooking(DocumentSnapshot document) {
         //extract data from the fields of the document
         List<Map<String, String>> ticketList = (List<Map<String, String>>) document.get("tickets");
-        UUID bookingRef = UUID.fromString((String) document.get("bookingId"));
+        String bookingRef = (String) document.get("bookingId");
         String timeString = (String) document.get("time");
-        LocalDateTime time = LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        String time = String.valueOf(LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         String customer = (String) document.get("customer");
 
         //list to store tickets from the db
@@ -121,10 +124,10 @@ public class FirestoreController {
         for (Map<String, String> ticket : ticketList) {
             String ticketBookingRef = ticket.get("bookingRef");
             String ticketCustomer = ticket.get("customer");
-            UUID seatId = UUID.fromString(ticket.get("seatId"));
-            UUID ticketId = UUID.fromString(ticket.get("ticketId"));
+            String seatId = ticket.get("seatId");
+            String ticketId = ticket.get("ticketId");
             String trainCompany = ticket.get("trainCompany");
-            UUID trainId = UUID.fromString(ticket.get("trainId"));
+            String trainId = ticket.get("trainId");
             //create local ticket with extracted data and add to the ticket list
             Ticket newTicket = new Ticket(trainCompany, trainId, seatId, ticketId, ticketCustomer, ticketBookingRef);
             tickets.add(newTicket);
