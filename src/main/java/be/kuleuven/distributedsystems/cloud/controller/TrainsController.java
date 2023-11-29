@@ -95,6 +95,9 @@ public class TrainsController {
         //returns the train if found in jsondata, if not returns an empty optional
         Optional<Train> train = TrainFunctions.getTrainByID(trainId, jsonData);
 
+        //for testing
+        firestoreController.addTrainInfo();
+
         //checks if train found, if not give error
         if (train.isPresent()) {
             return ResponseEntity.ok(train); // HTTP 200 with the train as the response body

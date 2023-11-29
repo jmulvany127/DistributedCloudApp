@@ -40,6 +40,8 @@ public class Train {
         return this.image;
     }
 
+
+
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof Train)) {
