@@ -39,7 +39,7 @@ public class FirestoreController {
 
         //create data object with fields of the booking to store in db
         Map<String, Object> docData = new HashMap<>();
-        docData.put("bookingId", id);
+        docData.put("bookingReference", id);
         docData.put("customer", customer);
         docData.put("time", time);
         docData.put("tickets", tickets);
@@ -47,6 +47,7 @@ public class FirestoreController {
         docRef.set(docData);
     }
 
+    // function to return all bookings from the firestore
     public List<Booking> getAllBookings() {
         CollectionReference docRef = firestore.collection("bookingCollection");
         ApiFuture<QuerySnapshot> querySnapshot = docRef.get();
@@ -65,17 +66,20 @@ public class FirestoreController {
         }
     }
 
+    // function to add the Eurostar London train to firestore
     public void addTrainInfo() {
-            //TODO, check if data has been initalised first, dont add twice
             CollectionReference colRef = firestore.collection("OurTrain");
             Train ourTrain = getTrain("data.json");
             List<Seat> seats = getSeats("data.json");
 
+            // create a new train
             DocumentReference trainDocRef = colRef.document(ourTrain.getName());
             ApiFuture<WriteResult> result = trainDocRef.set(ourTrain, SetOptions.merge());
 
+            // group seats by train time
             Map<String, List<Seat>> seatsGrouped = groupSeats(seats);
 
+            // add seats to the
             for (Map.Entry<String, List<Seat>> entry : seatsGrouped.entrySet()) {
                 List<Seat> seatsAtTime = entry.getValue();
                 CollectionReference seatRef = trainDocRef.collection(entry.getKey());
@@ -86,6 +90,7 @@ public class FirestoreController {
             }
     }
 
+    // function to group seats by time, seat data is stored by train time in firestore
     private Map<String, List<Seat>> groupSeats(List<Seat> seats) {
         Map<String, List<Seat>> seatsGrouped = new HashMap<>();
         for (Seat seat : seats) {
@@ -95,6 +100,7 @@ public class FirestoreController {
         return seatsGrouped;
     }
 
+    // functino to get seats from json file
     public Train getTrain(String fileName) {
         JsonObject jsonObject = getJsonObject("data.json");
         JsonArray trainsArray = jsonObject.getAsJsonArray("trains");
@@ -104,6 +110,7 @@ public class FirestoreController {
         return gson.fromJson(ourTrain, Train.class);
     }
 
+    // function to extract seats from json file
     public List<Seat> getSeats(String fileName) {
         JsonObject jsonObject = getJsonObject("data.json");
         JsonArray trainsArray = jsonObject.getAsJsonArray("trains");
@@ -123,21 +130,26 @@ public class FirestoreController {
         return seats;
     }
 
+    // function to get a JsonObject from .json file
     public JsonObject getJsonObject(String fileName) {
         InputStream inputStream = getClass().getClassLoader().getResourceAsStream(fileName);
         Gson gson = new Gson();
         return gson.fromJson(new InputStreamReader(inputStream), JsonObject.class);
     }
 
-    //TODO check / implement this function
-    private boolean dataInitialised() {
-        CollectionReference collectionReference = firestore.collection("OurTrain");
-        ApiFuture<DocumentSnapshot> future = collectionReference.document("train").get();
-
+    // function to check if Eurostar London train data has been put into firestore
+    public boolean dataInitialised() {
+        DocumentReference docRef = firestore.collection("OurTrain").document("Eurostar London");
         try {
-            return !future.get().exists();
+            //get snapshot of the document, returning false if it doesn't exist
+            DocumentSnapshot docSnapShot = docRef.get().get();
+            if (docSnapShot.exists()) {
+                return true;
+            } else {
+                return false;
+            }
         } catch (ExecutionException | InterruptedException e) {
-            return true;
+            throw new RuntimeException(e);
         }
     }
 

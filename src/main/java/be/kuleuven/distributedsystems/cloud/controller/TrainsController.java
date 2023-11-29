@@ -19,7 +19,6 @@ import static java.util.stream.Collectors.groupingBy;
 
 @RestController
 public class TrainsController {
-
     private final WebClient.Builder webClientBuilder;
     private final FirestoreController firestoreController;
     private final Publisher publisher;
@@ -40,6 +39,11 @@ public class TrainsController {
         trainCompanies.put(ReliableTrainCompany, ReliableTrains);
         String UnreliableTrainCompany = "unreliabletrains.com";
         trainCompanies.put(UnreliableTrainCompany, UnreliableTrains);
+
+
+        if (!firestoreController.dataInitialised()) {
+            firestoreController.addTrainInfo();
+        }
     }
 
     //returns all the json data from a given URL
@@ -95,8 +99,6 @@ public class TrainsController {
         //returns the train if found in jsondata, if not returns an empty optional
         Optional<Train> train = TrainFunctions.getTrainByID(trainId, jsonData);
 
-        //for testing
-        firestoreController.addTrainInfo();
 
         //checks if train found, if not give error
         if (train.isPresent()) {
