@@ -131,7 +131,7 @@ public class FirestoreController {
     }
 
     // function to get a JsonObject from .json file
-    public JsonObject getJsonObject(String fileName) {
+    private JsonObject getJsonObject(String fileName) {
         InputStream inputStream = getClass().getClassLoader().getResourceAsStream(fileName);
         Gson gson = new Gson();
         return gson.fromJson(new InputStreamReader(inputStream), JsonObject.class);
@@ -175,6 +175,25 @@ public class FirestoreController {
             throw new RuntimeException(e);
         }
         throw new RuntimeException("Error when receiving booking");
+    }
+
+    // function to return our train from firestore
+    public Train getTrainByName(String name) {
+        CollectionReference colRef = firestore.collection("OurTrain");
+        DocumentReference trainDocRef = colRef.document(name);
+
+        try {
+            DocumentSnapshot docSnapshot = trainDocRef.get().get();
+            if (docSnapshot.exists()) {
+                Train train = docSnapshot.toObject(Train.class);
+                return train;
+            } else {
+                System.out.println("train not in firestore");
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
     }
 
 }

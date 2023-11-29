@@ -63,7 +63,7 @@ public class TrainsController {
         return jsonData != null ? jsonData : "";// Return empty string if jsonData is null
     }
 
-    //gets all trains, only reliabletraincompany for now
+    // function that will return all trains
     @GetMapping("api/getTrains")
     public ResponseEntity<?> getallTrains() {
 
@@ -81,6 +81,8 @@ public class TrainsController {
         }
         List<Train> unreliableTrains = TrainFunctions.extractTrains(jsonData);
 
+        Train train = firestoreController.getTrainByName("Eurostar London");
+        allTrains.add(train);
         allTrains.addAll(unreliableTrains);
         return ResponseEntity.ok(allTrains);
     }
@@ -109,7 +111,7 @@ public class TrainsController {
         }
     }
 
-    //return a string list of a specific trains times , if train not found return 404 error
+    //return a string list of a specific trains times, if train not found return 404 error
     @GetMapping("api/getTrainTimes")
     public ResponseEntity<?> getTrainTimes(String trainCompany, String trainId) {
         //gets the traincompany/trains URL form hashmap, then use to get json data
