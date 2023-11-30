@@ -20,6 +20,14 @@ public class Train {
         this.image = image;
     }
 
+    public void setTrainId(String trainId) {
+        this.trainId = trainId;
+    }
+
+    public void setTrainCompany(String trainCompany) {
+        this.trainCompany = trainCompany;
+    }
+
     public String getTrainCompany() {
         return trainCompany;
     }
