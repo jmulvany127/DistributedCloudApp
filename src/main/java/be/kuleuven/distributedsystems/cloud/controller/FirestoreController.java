@@ -75,7 +75,7 @@ public class FirestoreController {
             CollectionReference colRef = firestore.collection("OurTrain");
             Train train = getTrain("data.json");
             train.setTrainId(ourTrainId);
-            train.setTrainCompany("ourTrainCompany");
+            train.setTrainCompany(ourTrain);
             List<Seat> seats = getSeats("data.json");
 
             // create a new train
@@ -98,7 +98,6 @@ public class FirestoreController {
 
             CollectionReference timesRef = trainDocRef.collection("times");
             List<String> trainTimes = getTrainTimes(ourTrain);
-            System.out.println("trainTimes in adddata" + trainTimes);
             for (String time : trainTimes) {
                 Map<String, Object> timeData = new HashMap<>();
                 timeData.put("testdata", "value");
@@ -117,12 +116,10 @@ public class FirestoreController {
                 CollectionReference timesRef = trainDocRef.collection("times");
                 ApiFuture<QuerySnapshot> querySnapshot = timesRef.get();
                 List<String> timesList = new ArrayList<>();
-                System.out.println(timesList);
 
                 for (QueryDocumentSnapshot document : querySnapshot.get().getDocuments()) {
                     timesList.add(document.getId());
                 }
-                System.out.println(timesList);
 
                 return timesList;
             }
@@ -232,7 +229,6 @@ public class FirestoreController {
             DocumentSnapshot docSnapshot = trainDocRef.get().get();
             if (docSnapshot.exists()) {
                 Train train = docSnapshot.toObject(Train.class);
-                System.out.println(train);
                 return train;
             } else {
                 System.out.println("train not in firestore");
@@ -265,7 +261,6 @@ public class FirestoreController {
                         uniqueTimes.add(time);
                     }
                 }
-                System.out.println("unique" + uniqueTimes);
                 return new ArrayList<>(uniqueTimes);
             }
         } catch (ExecutionException | InterruptedException e) {
@@ -291,7 +286,6 @@ public class FirestoreController {
                 Seat seat = document.toObject(Seat.class);
                 seats.add(seat);
             }
-            System.out.println(seats);
 
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
@@ -299,11 +293,25 @@ public class FirestoreController {
         return seats;
     }
 
-    public Seat getSeatFromId(String trainName, String id) {
+    public Seat getSeatFromId(String trainName, String trainId, String seatId) {
         CollectionReference colRef = firestore.collection("OurTrain");
         DocumentReference trainDocRef = colRef.document(trainName);
+        CollectionReference colTimeRef = trainDocRef.collection(trainId);
 
-    return null;
+        try {
+            Query query = colTimeRef.whereEqualTo("seatId", seatId);
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+            QuerySnapshot snapshot = querySnapshot.get();
+
+            if (!snapshot.isEmpty()) {
+                QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+                Seat seat = document.toObject(Seat.class);
+                return seat;
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
     }
 
 }
