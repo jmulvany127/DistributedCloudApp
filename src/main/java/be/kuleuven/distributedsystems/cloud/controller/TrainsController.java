@@ -94,7 +94,7 @@ public class TrainsController {
     @GetMapping("api/getTrain")
     public ResponseEntity<?> getTrain(String trainCompany, String trainId) {
         // to deal with our own train company
-        if (Objects.equals(trainCompany, "ourTrainCompany")) {
+        if (Objects.equals(trainCompany, "Eurostar London")) {
             Train train = firestoreController.getTrainByName(ourTrain);
             return ResponseEntity.ok(train);
         }
@@ -124,7 +124,7 @@ public class TrainsController {
     @GetMapping("api/getTrainTimes")
     public ResponseEntity<?> getTrainTimes(String trainCompany, String trainId) {
         // to deal with our own train company
-        if (Objects.equals(trainCompany, "ourTrainCompany")) {
+        if (Objects.equals(trainCompany, "Eurostar London")) {
             List<String> ourTrainTimes = firestoreController.getTrainTimesFromId(ourTrain, trainId);
             System.out.println(ourTrainTimes);
             return ResponseEntity.ok(ourTrainTimes);
@@ -160,24 +160,27 @@ public class TrainsController {
     @GetMapping("api/getAvailableSeats")
     public ResponseEntity<?> getAvailableSeats(String trainCompany, String trainId, String time) {
         // to deal with our own train company
-        if (Objects.equals(trainCompany, "ourTrainCompany")) {
-            List<Seat> seats = firestoreController.getSeatsFromTrainId(ourTrain, time, trainId);
-            Seat[] seatsArray = seats.toArray(new Seat[0]);
-            return ResponseEntity.ok(Arrays.stream(seatsArray).collect(groupingBy(Seat::getType)));
+        List<Seat> seats = null;
+        if (Objects.equals(trainCompany, "Eurostar London")) {
+            seats = firestoreController.getSeatsFromTrainId(ourTrain, time, trainId);
+            System.out.println(seats);
+        } else {
+            //build the URL to acess seats, then get raw json data
+            String seatsURL = "https://" + trainCompany + "/trains/" + trainId + "/seats?time=" + time + "&available=true&" + TrainsKey;
+            System.out.println(seatsURL);
+            String seatsJsonData = getjson(seatsURL);
+
+            //if unreliable trains.com is not reachable an empty string will be returned, give error
+            if (seatsJsonData.isEmpty()) {
+                String errorMessage = (trainCompany + "is unreachable, return to homepage.");
+                return ResponseEntity.status(500).body(errorMessage);
+            }
+            //extracts a list of unsorted seats
+            seats = TrainFunctions.extractSeats(seatsJsonData);
+            System.out.println(seats);
         }
 
-        //build the URL to acess seats, then get raw json data
-        String seatsURL = "https://" + trainCompany + "/trains/" + trainId + "/seats?time=" + time + "&available=true&" + TrainsKey;
-        System.out.println(seatsURL);
-        String seatsJsonData = getjson(seatsURL);
 
-        //if unreliable trains.com is not reachable an empty string will be returned, give error
-        if (seatsJsonData.isEmpty()) {
-            String errorMessage = (trainCompany + "is unreachable, return to homepage.");
-            return ResponseEntity.status(500).body(errorMessage);
-        }
-        //extracts a list of unsorted seats
-        List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
         List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
 
         Seat[] seatsArray = seats.toArray(new Seat[0]);
@@ -189,11 +192,17 @@ public class TrainsController {
     // get an individual seat by its id
     @GetMapping("api/getSeat")
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
-        if (Objects.equals(trainCompany, "ourTrainCompany")) {
-            //firestoreController.getSeatFromId();
+        System.out.println("start");
+        if (Objects.equals(trainCompany, "Eurostar London")) {
+            Seat seat = firestoreController.getSeatFromId(trainCompany, trainId, seatId);
+            System.out.println("here");
+            System.out.println(seat);
+            return ResponseEntity.ok(seat);
         }
+
         //make seat URl
         String seatURL = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "?" + TrainsKey;
+        System.out.println("this one");
 
         WebClient webClient = webClientBuilder.baseUrl(seatURL).build();
         //get seat, if error seat wil be null
@@ -245,8 +254,7 @@ public class TrainsController {
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
-        String successMsg = "Booking Request made";
-        return ResponseEntity.status(204).body(successMsg);
+        return ResponseEntity.status(204).body("Booking Request made");
     }
 
     // get all the bookings from a specific user
