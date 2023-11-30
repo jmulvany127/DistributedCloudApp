@@ -125,7 +125,8 @@ public class TrainsController {
     public ResponseEntity<?> getTrainTimes(String trainCompany, String trainId) {
         // to deal with our own train company
         if (Objects.equals(trainCompany, "ourTrainCompany")) {
-            List<String> ourTrainTimes = firestoreController.getTrainTimes(ourTrain);
+            List<String> ourTrainTimes = firestoreController.getTrainTimesFromId(ourTrain, trainId);
+            System.out.println(ourTrainTimes);
             return ResponseEntity.ok(ourTrainTimes);
         }
 
@@ -160,14 +161,14 @@ public class TrainsController {
     public ResponseEntity<?> getAvailableSeats(String trainCompany, String trainId, String time) {
         // to deal with our own train company
         if (Objects.equals(trainCompany, "ourTrainCompany")) {
-            List<Seat> seats = firestoreController.getSeatsForTime(ourTrain, time);
+            List<Seat> seats = firestoreController.getSeatsFromTrainId(ourTrain, time, trainId);
             Seat[] seatsArray = seats.toArray(new Seat[0]);
-
             return ResponseEntity.ok(Arrays.stream(seatsArray).collect(groupingBy(Seat::getType)));
         }
 
         //build the URL to acess seats, then get raw json data
         String seatsURL = "https://" + trainCompany + "/trains/" + trainId + "/seats?time=" + time + "&available=true&" + TrainsKey;
+        System.out.println(seatsURL);
         String seatsJsonData = getjson(seatsURL);
 
         //if unreliable trains.com is not reachable an empty string will be returned, give error
@@ -177,6 +178,8 @@ public class TrainsController {
         }
         //extracts a list of unsorted seats
         List<Seat> seats = TrainFunctions.extractSeats(seatsJsonData);
+        List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
+
         Seat[] seatsArray = seats.toArray(new Seat[0]);
 
         //return seats array grouped by seat type
@@ -186,6 +189,9 @@ public class TrainsController {
     // get an individual seat by its id
     @GetMapping("api/getSeat")
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
+        if (Objects.equals(trainCompany, "ourTrainCompany")) {
+            //firestoreController.getSeatFromId();
+        }
         //make seat URl
         String seatURL = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "?" + TrainsKey;
 

@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 public class FirestoreController {
     private final Firestore firestore;
     private final String ourTrain = "Eurostar London";
+    private final String ourTrainId = UUID.randomUUID().toString();
 
     @Autowired
     public FirestoreController(Firestore firestore) {
@@ -72,43 +73,79 @@ public class FirestoreController {
     // function to add the Eurostar London train to firestore
     public void addTrainInfo() {
             CollectionReference colRef = firestore.collection("OurTrain");
-            Train ourTrain = getTrain("data.json");
-            ourTrain.setTrainId(UUID.randomUUID().toString());
-            ourTrain.setTrainCompany("ourTrainCompany");
+            Train train = getTrain("data.json");
+            train.setTrainId(ourTrainId);
+            train.setTrainCompany("ourTrainCompany");
             List<Seat> seats = getSeats("data.json");
 
             // create a new train
-            DocumentReference trainDocRef = colRef.document(ourTrain.getName());
-            ApiFuture<WriteResult> result = trainDocRef.set(ourTrain, SetOptions.merge());
+            DocumentReference trainDocRef = colRef.document(train.getName());
+            ApiFuture<WriteResult> result = trainDocRef.set(train, SetOptions.merge());
 
-            // group seats by train time
+            // group seats by trainid
             Map<String, List<Seat>> seatsGrouped = groupSeats(seats);
 
             // add seats to the firestore
             for (Map.Entry<String, List<Seat>> entry : seatsGrouped.entrySet()) {
-                List<Seat> seatsAtTime = entry.getValue();
+                List<Seat> seatsGroupedById = entry.getValue();
+                seatsGroupedById.sort(Comparator.comparing(Seat::getName));
                 CollectionReference seatRef = trainDocRef.collection(entry.getKey());
 
-                for (Seat seat : seatsAtTime) {
+                for (Seat seat : seatsGroupedById) {
                     seatRef.add(seat);
                 }
             }
+
+            CollectionReference timesRef = trainDocRef.collection("times");
+            List<String> trainTimes = getTrainTimes(ourTrain);
+            System.out.println("trainTimes in adddata" + trainTimes);
+            for (String time : trainTimes) {
+                Map<String, Object> timeData = new HashMap<>();
+                timeData.put("testdata", "value");
+                ApiFuture<WriteResult> writeResult = timesRef.document(time).set(timeData);
+            }
+    }
+
+    // function that returns the list of train times given a trainId and train company name
+    public List<String> getTrainTimesFromId(String trainName, String trainId) {
+        CollectionReference colRef = firestore.collection("OurTrain");
+        DocumentReference trainDocRef = colRef.document(trainName);
+
+        try {
+            DocumentSnapshot docSnapshot = trainDocRef.get().get();
+            if (docSnapshot.exists()) {
+                CollectionReference timesRef = trainDocRef.collection("times");
+                ApiFuture<QuerySnapshot> querySnapshot = timesRef.get();
+                List<String> timesList = new ArrayList<>();
+                System.out.println(timesList);
+
+                for (QueryDocumentSnapshot document : querySnapshot.get().getDocuments()) {
+                    timesList.add(document.getId());
+                }
+                System.out.println(timesList);
+
+                return timesList;
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
     }
 
     // function to group seats by time, seat data is stored by train time in firestore
     private Map<String, List<Seat>> groupSeats(List<Seat> seats) {
         Map<String, List<Seat>> seatsGrouped = new HashMap<>();
         for (Seat seat : seats) {
-            String time = seat.getTime();
+            seat.setTrainId(ourTrainId);
+            String trainId = seat.getTrainId();
             seat.setTrainCompany(ourTrain);
             seat.setSeatId(UUID.randomUUID().toString());
-            seat.setTrainId(UUID.randomUUID().toString());
-            seatsGrouped.computeIfAbsent(time, k -> new ArrayList<>()).add(seat);
+            seatsGrouped.computeIfAbsent(trainId, k -> new ArrayList<>()).add(seat);
         }
         return seatsGrouped;
     }
 
-    // functino to get seats from json file
+    // function to get seats from json file
     public Train getTrain(String fileName) {
         JsonObject jsonObject = getJsonObject("data.json");
         JsonArray trainsArray = jsonObject.getAsJsonArray("trains");
@@ -135,6 +172,7 @@ public class FirestoreController {
                 seats.add(seat);
             }
         }
+        seats.sort(Comparator.comparing(Seat::getName));
         return seats;
     }
 
@@ -194,6 +232,7 @@ public class FirestoreController {
             DocumentSnapshot docSnapshot = trainDocRef.get().get();
             if (docSnapshot.exists()) {
                 Train train = docSnapshot.toObject(Train.class);
+                System.out.println(train);
                 return train;
             } else {
                 System.out.println("train not in firestore");
@@ -204,7 +243,8 @@ public class FirestoreController {
         return null;
     }
 
-    // function that takes the name of a train and returns all of its times
+    // function that takes the name of a train and returns all of its times, returns a list of unique train times
+    // to be used when initialising data in the firebase, nowhere else
     public List<String> getTrainTimes(String trainName) {
         CollectionReference colRef = firestore.collection("OurTrain");
         DocumentReference trainDocRef = colRef.document(trainName);
@@ -212,13 +252,21 @@ public class FirestoreController {
         try {
             DocumentSnapshot docSnapshot = trainDocRef.get().get();
             if (docSnapshot.exists()) {
-                Iterable<CollectionReference> colTimes = trainDocRef.listCollections();
-                List<String> times = new ArrayList<>();
+                Iterable<CollectionReference> colTrains = trainDocRef.listCollections();
+                // only store each unique time once
+                Set<String> uniqueTimes = new HashSet<>();
 
-                for (CollectionReference collection : colTimes) {
-                    times.add(collection.getId());
+                for (CollectionReference collection : colTrains) {
+                    ApiFuture<QuerySnapshot> querySnapshot = collection.get();
+                    QuerySnapshot snapshots = querySnapshot.get();
+
+                    for (QueryDocumentSnapshot document : snapshots) {
+                        String time = document.getString("time");
+                        uniqueTimes.add(time);
+                    }
                 }
-                return times;
+                System.out.println("unique" + uniqueTimes);
+                return new ArrayList<>(uniqueTimes);
             }
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
@@ -227,15 +275,16 @@ public class FirestoreController {
     }
 
     // function that takes the name of a train and its time and returns all its seats
-    public List<Seat> getSeatsForTime(String trainName, String time) {
+    public List<Seat> getSeatsFromTrainId(String trainName, String time, String trainId) {
         CollectionReference colRef = firestore.collection("OurTrain");
         DocumentReference trainDocRef = colRef.document(trainName);
-        CollectionReference colTimeRef = trainDocRef.collection(time);
+        CollectionReference colTimeRef = trainDocRef.collection(trainId);
 
         List<Seat> seats = new ArrayList<>();
 
         try {
-            ApiFuture<QuerySnapshot> querySnapshot = colTimeRef.get();
+            Query query = colTimeRef.whereEqualTo("time", time).orderBy("name");
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
             List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
 
             for (QueryDocumentSnapshot document : documents) {
@@ -248,6 +297,13 @@ public class FirestoreController {
             throw new RuntimeException(e);
         }
         return seats;
+    }
+
+    public Seat getSeatFromId(String trainName, String id) {
+        CollectionReference colRef = firestore.collection("OurTrain");
+        DocumentReference trainDocRef = colRef.document(trainName);
+
+    return null;
     }
 
 }
