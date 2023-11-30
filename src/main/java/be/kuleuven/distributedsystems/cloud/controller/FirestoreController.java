@@ -12,8 +12,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.print.Doc;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.LocalDateTime;
@@ -33,6 +31,7 @@ public class FirestoreController {
         this.firestore = firestore;
     }
 
+    // function that takes a booking and adds it to the firestore
     public void addBooking(Booking booking) {
         DocumentReference docRef = firestore.collection("bookingCollection").document(booking.getId());
         //extract fields from booking
@@ -96,6 +95,7 @@ public class FirestoreController {
                 }
             }
 
+            // storing collection of train times, allowing for fast datebase query at the getTrainTimes endpoint
             CollectionReference timesRef = trainDocRef.collection("times");
             List<String> trainTimes = getTrainTimes(ourTrain);
             for (String time : trainTimes) {
@@ -120,7 +120,6 @@ public class FirestoreController {
                 for (QueryDocumentSnapshot document : querySnapshot.get().getDocuments()) {
                     timesList.add(document.getId());
                 }
-
                 return timesList;
             }
         } catch (ExecutionException | InterruptedException e) {
@@ -129,7 +128,7 @@ public class FirestoreController {
         return null;
     }
 
-    // function to group seats by time, seat data is stored by train time in firestore
+    // function to group seats by time
     private Map<String, List<Seat>> groupSeats(List<Seat> seats) {
         Map<String, List<Seat>> seatsGrouped = new HashMap<>();
         for (Seat seat : seats) {
@@ -163,7 +162,6 @@ public class FirestoreController {
         for (JsonElement trainElement : trainsArray) {
             JsonObject trainObject = trainElement.getAsJsonObject();
             JsonArray seatsArray = trainObject.getAsJsonArray("seats");
-
             for (JsonElement seatElement : seatsArray) {
                 Seat seat = gson.fromJson(seatElement, Seat.class);
                 seats.add(seat);
@@ -194,30 +192,6 @@ public class FirestoreController {
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    //DONT THINK WE NEED TO USE BUT KEEPING FOR THE MOMENT
-    public Booking getBooking(String bookingId) {
-        DocumentReference docRef = firestore.collection("bookingCollection").document(bookingId);
-        ApiFuture<DocumentSnapshot> future = docRef.get();
-
-        try {
-            //get document from the db
-            DocumentSnapshot document = future.get();
-            if (document.exists()) {
-                //extract data from different fields of the document
-                List<Ticket> ticketList = (List<Ticket>) document.get("tickets");
-                String bookingRef = (String) document.get("bookingId");
-                String timeString = (String) document.get("time");
-                String time = String.valueOf(LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                String customer = (String) document.get("customer");
-
-                return new Booking(bookingRef, time, ticketList, customer);
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-        throw new RuntimeException("Error when receiving booking");
     }
 
     // function to return our train from firestore
@@ -251,7 +225,6 @@ public class FirestoreController {
                 Iterable<CollectionReference> colTrains = trainDocRef.listCollections();
                 // only store each unique time once
                 Set<String> uniqueTimes = new HashSet<>();
-
                 for (CollectionReference collection : colTrains) {
                     ApiFuture<QuerySnapshot> querySnapshot = collection.get();
                     QuerySnapshot snapshots = querySnapshot.get();
@@ -276,7 +249,6 @@ public class FirestoreController {
         CollectionReference colTimeRef = trainDocRef.collection(trainId);
 
         List<Seat> seats = new ArrayList<>();
-
         try {
             Query query = colTimeRef.whereEqualTo("time", time).orderBy("name");
             ApiFuture<QuerySnapshot> querySnapshot = query.get();
@@ -286,13 +258,13 @@ public class FirestoreController {
                 Seat seat = document.toObject(Seat.class);
                 seats.add(seat);
             }
-
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
         return seats;
     }
 
+    // function that returns the seat identified by its id, trainid and train company name
     public Seat getSeatFromId(String trainName, String trainId, String seatId) {
         CollectionReference colRef = firestore.collection("OurTrain");
         DocumentReference trainDocRef = colRef.document(trainName);
@@ -312,6 +284,32 @@ public class FirestoreController {
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+
+
+    //DONT THINK WE NEED TO USE BUT KEEPING FOR THE MOMENT
+    public Booking getBooking(String bookingId) {
+        DocumentReference docRef = firestore.collection("bookingCollection").document(bookingId);
+        ApiFuture<DocumentSnapshot> future = docRef.get();
+
+        try {
+            //get document from the db
+            DocumentSnapshot document = future.get();
+            if (document.exists()) {
+                //extract data from different fields of the document
+                List<Ticket> ticketList = (List<Ticket>) document.get("tickets");
+                String bookingRef = (String) document.get("bookingId");
+                String timeString = (String) document.get("time");
+                String time = String.valueOf(LocalDateTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                String customer = (String) document.get("customer");
+
+                return new Booking(bookingRef, time, ticketList, customer);
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        throw new RuntimeException("Error when receiving booking");
     }
 
 }

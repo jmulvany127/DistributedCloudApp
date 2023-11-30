@@ -43,7 +43,6 @@ public class TrainsController {
         String UnreliableTrainCompany = "unreliabletrains.com";
         trainCompanies.put(UnreliableTrainCompany, UnreliableTrains);
 
-
         if (!firestoreController.dataInitialised()) {
             firestoreController.addTrainInfo();
         }
@@ -69,21 +68,18 @@ public class TrainsController {
     // function that will return all trains
     @GetMapping("api/getTrains")
     public ResponseEntity<?> getallTrains() {
-
         // get json data from the baseurl
         String jsonData = getjson(ReliableTrains);
-
-        // Extract train objects from json data
         List<Train> allTrains = TrainFunctions.extractTrains(jsonData);
 
         jsonData = getjson(UnreliableTrains);
-        //if unreliable trains.com is not reached an empty string will be returned
-        //reliable trains will still be displayed
+        //if unreliable trains.com is not reached an empty string will be returned, eliable trains will still be displayed
         if (jsonData.isEmpty()) {
             System.out.println("UnreliableTrainCompany.com unreachable");
         }
         List<Train> unreliableTrains = TrainFunctions.extractTrains(jsonData);
 
+        //adding our internal train company
         Train train = firestoreController.getTrainByName(ourTrain);
         allTrains.add(train);
         allTrains.addAll(unreliableTrains);
@@ -93,8 +89,8 @@ public class TrainsController {
     //return a single train by its ID, if not found return 404 error
     @GetMapping("api/getTrain")
     public ResponseEntity<?> getTrain(String trainCompany, String trainId) {
-        // to deal with our own train company
-        if (Objects.equals(trainCompany, "Eurostar London")) {
+        // to deal with internal train company
+        if (Objects.equals(trainCompany, ourTrain)) {
             Train train = firestoreController.getTrainByName(ourTrain);
             return ResponseEntity.ok(train);
         }
@@ -110,13 +106,11 @@ public class TrainsController {
         //returns the train if found in jsondata, if not returns an empty optional
         Optional<Train> train = TrainFunctions.getTrainByID(trainId, jsonData);
 
-
         //checks if train found, if not give error
         if (train.isPresent()) {
             return ResponseEntity.ok(train); // HTTP 200 with the train as the response body
         } else {
-            String errorMessage = "Train not found";
-            return ResponseEntity.status(404).body(errorMessage); // HTTP 404 with the error message
+            return ResponseEntity.status(404).body("Train not found"); // HTTP 404 with the error message
         }
     }
 
@@ -124,7 +118,7 @@ public class TrainsController {
     @GetMapping("api/getTrainTimes")
     public ResponseEntity<?> getTrainTimes(String trainCompany, String trainId) {
         // to deal with our own train company
-        if (Objects.equals(trainCompany, "Eurostar London")) {
+        if (Objects.equals(trainCompany, ourTrain)) {
             List<String> ourTrainTimes = firestoreController.getTrainTimesFromId(ourTrain, trainId);
             System.out.println(ourTrainTimes);
             return ResponseEntity.ok(ourTrainTimes);
@@ -161,7 +155,7 @@ public class TrainsController {
     public ResponseEntity<?> getAvailableSeats(String trainCompany, String trainId, String time) {
         // to deal with our own train company
         List<Seat> seats = null;
-        if (Objects.equals(trainCompany, "Eurostar London")) {
+        if (Objects.equals(trainCompany, ourTrain)) {
             seats = firestoreController.getSeatsFromTrainId(ourTrain, time, trainId);
             System.out.println(seats);
         } else {
@@ -192,11 +186,9 @@ public class TrainsController {
     // get an individual seat by its id
     @GetMapping("api/getSeat")
     public ResponseEntity<?> getSeat(String trainCompany, String trainId, String seatId) {
-        System.out.println("start");
-        if (Objects.equals(trainCompany, "Eurostar London")) {
+        // to deal with internal train company
+        if (Objects.equals(trainCompany, ourTrain)) {
             Seat seat = firestoreController.getSeatFromId(trainCompany, trainId, seatId);
-            System.out.println("here");
-            System.out.println(seat);
             return ResponseEntity.ok(seat);
         }
 

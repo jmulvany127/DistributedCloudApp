@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.reactive.function.client.WebClientException;
 
-
 //operates as local subscriber in emulated pub sub system
 @RestController
 public class SubscriberController {
