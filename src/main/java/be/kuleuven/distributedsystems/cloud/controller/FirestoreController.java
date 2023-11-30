@@ -12,6 +12,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import javax.print.Doc;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.LocalDateTime;
@@ -23,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 @Service
 public class FirestoreController {
     private final Firestore firestore;
+    private final String ourTrain = "Eurostar London";
 
     @Autowired
     public FirestoreController(Firestore firestore) {
@@ -70,6 +73,8 @@ public class FirestoreController {
     public void addTrainInfo() {
             CollectionReference colRef = firestore.collection("OurTrain");
             Train ourTrain = getTrain("data.json");
+            ourTrain.setTrainId(UUID.randomUUID().toString());
+            ourTrain.setTrainCompany("ourTrainCompany");
             List<Seat> seats = getSeats("data.json");
 
             // create a new train
@@ -79,7 +84,7 @@ public class FirestoreController {
             // group seats by train time
             Map<String, List<Seat>> seatsGrouped = groupSeats(seats);
 
-            // add seats to the
+            // add seats to the firestore
             for (Map.Entry<String, List<Seat>> entry : seatsGrouped.entrySet()) {
                 List<Seat> seatsAtTime = entry.getValue();
                 CollectionReference seatRef = trainDocRef.collection(entry.getKey());
@@ -95,6 +100,9 @@ public class FirestoreController {
         Map<String, List<Seat>> seatsGrouped = new HashMap<>();
         for (Seat seat : seats) {
             String time = seat.getTime();
+            seat.setTrainCompany(ourTrain);
+            seat.setSeatId(UUID.randomUUID().toString());
+            seat.setTrainId(UUID.randomUUID().toString());
             seatsGrouped.computeIfAbsent(time, k -> new ArrayList<>()).add(seat);
         }
         return seatsGrouped;
@@ -194,6 +202,52 @@ public class FirestoreController {
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    // function that takes the name of a train and returns all of its times
+    public List<String> getTrainTimes(String trainName) {
+        CollectionReference colRef = firestore.collection("OurTrain");
+        DocumentReference trainDocRef = colRef.document(trainName);
+
+        try {
+            DocumentSnapshot docSnapshot = trainDocRef.get().get();
+            if (docSnapshot.exists()) {
+                Iterable<CollectionReference> colTimes = trainDocRef.listCollections();
+                List<String> times = new ArrayList<>();
+
+                for (CollectionReference collection : colTimes) {
+                    times.add(collection.getId());
+                }
+                return times;
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+
+    // function that takes the name of a train and its time and returns all its seats
+    public List<Seat> getSeatsForTime(String trainName, String time) {
+        CollectionReference colRef = firestore.collection("OurTrain");
+        DocumentReference trainDocRef = colRef.document(trainName);
+        CollectionReference colTimeRef = trainDocRef.collection(time);
+
+        List<Seat> seats = new ArrayList<>();
+
+        try {
+            ApiFuture<QuerySnapshot> querySnapshot = colTimeRef.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
+
+            for (QueryDocumentSnapshot document : documents) {
+                Seat seat = document.toObject(Seat.class);
+                seats.add(seat);
+            }
+            System.out.println(seats);
+
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return seats;
     }
 
 }

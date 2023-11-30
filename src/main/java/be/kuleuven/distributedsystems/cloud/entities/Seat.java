@@ -25,6 +25,18 @@ public class Seat {
         this.price = price;
     }
 
+    public void setTrainCompany(String trainCompany) {
+        this.trainCompany = trainCompany;
+    }
+
+    public void setTrainId(String trainId) {
+        this.trainId = trainId;
+    }
+
+    public void setSeatId(String seatId) {
+        this.seatId = seatId;
+    }
+
     public String getTrainCompany() {
         return trainCompany;
     }
