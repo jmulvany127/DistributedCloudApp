@@ -36,7 +36,6 @@ public class TicketsTopic {
                     FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
             CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
 
-
             //create topic admin client
             TopicAdminClient topicClient =
                     TopicAdminClient.create(
