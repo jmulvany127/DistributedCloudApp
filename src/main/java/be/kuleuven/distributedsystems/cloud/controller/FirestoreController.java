@@ -1,9 +1,6 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
-import be.kuleuven.distributedsystems.cloud.entities.Booking;
-import be.kuleuven.distributedsystems.cloud.entities.Seat;
-import be.kuleuven.distributedsystems.cloud.entities.Ticket;
-import be.kuleuven.distributedsystems.cloud.entities.Train;
+import be.kuleuven.distributedsystems.cloud.entities.*;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.gson.Gson;
@@ -284,6 +281,26 @@ public class FirestoreController {
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    // function that takes a quote and returns a ticket if seat is available
+    public Ticket bookTicket(Quote quote, String customer, String bookingRef) {
+        CollectionReference colRef = firestore.collection("OurTrain");
+        DocumentReference trainDocRef = colRef.document(quote.getTrainCompany());
+        CollectionReference colTimeRef = trainDocRef.collection(quote.getTrainId());
+        CollectionReference bookedRef = trainDocRef.collection("bookedTickets");
+
+        return (Ticket) firestore.runTransaction(transaction -> {
+            DocumentSnapshot seatSnapshot = (DocumentSnapshot) transaction.get(colTimeRef.document(quote.getSeatId()));
+            if (seatSnapshot.exists()) {
+                Ticket newTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(),
+                        UUID.randomUUID().toString(), customer, bookingRef);
+                transaction.set(bookedRef.document(), newTicket);
+                return newTicket;
+            } else {
+                throw new RuntimeException("Seat not available");
+            }
+        });
     }
 
 

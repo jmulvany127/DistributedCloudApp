@@ -28,7 +28,6 @@ public class SubscriberController {
     //receives a json String containing an embedded pub sub message
     @PostMapping ("/subscription")
     public ResponseEntity<?> subscriber(@RequestBody String body) throws JsonProcessingException {
-
         ObjectMapper objectMapper = new ObjectMapper();
         String data = null;
         String rawticketsUrls = null;

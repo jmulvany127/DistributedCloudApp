@@ -174,9 +174,7 @@ public class TrainsController {
             System.out.println(seats);
         }
 
-
         List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
-
         Seat[] seatsArray = seats.toArray(new Seat[0]);
 
         //return seats array grouped by seat type
@@ -217,7 +215,7 @@ public class TrainsController {
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
     @PostMapping("api/confirmQuotes")
     public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
-        //create list for tickets, generate booking referenece and get the user
+        //create list for tickets, generate booking reference and get the user
         List<Ticket> tickets = new ArrayList<>();
         UUID bookingRef = UUID.randomUUID();
         User user = getUser();
@@ -238,11 +236,9 @@ public class TrainsController {
         try {
             ByteString dataMessage = ByteString.copyFromUtf8(ticketUrlsList.toString());
             PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(dataMessage).build();
-
             ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
             String messageId = messageIdFuture.get();
             System.out.println("Published message ID:" + messageId);
-
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
