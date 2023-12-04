@@ -2,6 +2,8 @@ package be.kuleuven.distributedsystems.cloud.controller;
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
 import java.util.*;
+
+import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.pubsub.v1.Publisher;
@@ -216,25 +218,21 @@ public class TrainsController {
     @PostMapping("api/confirmQuotes")
     public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
         //create list for tickets, generate booking reference and get the user
-        List<Ticket> tickets = new ArrayList<>();
-        UUID bookingRef = UUID.randomUUID();
+        List<String> jsonQuotes = new ArrayList<>();
+        //Convert each quote to json
+        for (Quote quote : quotes){
+            String jsonQuote = quote.toJson();
+            jsonQuotes.add(jsonQuote);
+        }
+        Gson gson = new Gson();
+        //get user email and add to json data
         User user = getUser();
         String userEmail = user.getEmail();
         userEmail = userEmail.replace("\"", "");
-
-        List<String> ticketUrlsList = new ArrayList<>();
-
-        //for each quote, create a ticket
-        String finalUserEmail = userEmail;
-        quotes.stream().forEach(quote -> {
-            String ticketUrl = "https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + finalUserEmail + "&bookingReference=" +
-                    bookingRef + "&" + TrainsKey;
-            ticketUrlsList.add(ticketUrl);
-        });
-        ticketUrlsList.add(userEmail);
-
+        jsonQuotes.add(userEmail);
+        //encode jsondata and publish as message
         try {
-            ByteString dataMessage = ByteString.copyFromUtf8(ticketUrlsList.toString());
+            ByteString dataMessage = ByteString.copyFromUtf8(gson.toJson(jsonQuotes));
             PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(dataMessage).build();
             ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
             String messageId = messageIdFuture.get();
@@ -244,6 +242,8 @@ public class TrainsController {
         }
         return ResponseEntity.status(204).body("Booking Request made");
     }
+
+
 
     // get all the bookings from a specific user
     @GetMapping("api/getBookings")
