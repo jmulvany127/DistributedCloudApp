@@ -1,5 +1,5 @@
 package be.kuleuven.distributedsystems.cloud.entities;
-
+import com.google.gson.Gson;
 import java.util.UUID;
 
 public class Quote {
@@ -55,5 +55,10 @@ public class Quote {
     @Override
     public int hashCode() {
         return this.trainCompany.hashCode() * this.trainId.hashCode() * this.seatId.hashCode();
+    }
+
+    public String toJson() {
+        Gson gson = new Gson();
+        return gson.toJson(this);
     }
 }
