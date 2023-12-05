@@ -35,29 +35,29 @@ public class TicketSubscription {
     public static void createPushSubscription(
             String projectId, String subscriptionId, String topicId, String pushEndpoint, ManagedChannel channel)
             throws IOException {
-                    // Set the channel and credentials provider when creating a `SubscriptionAdminClient
-                    TransportChannelProvider channelProvider =
-                            FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
-                    CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
+        // Set the channel and credentials provider when creating a `SubscriptionAdminClient
+        TransportChannelProvider channelProvider =
+                FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
+        CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
 
-                    //define subscription and topic names
-                    TopicName topicName = TopicName.of(projectId, topicId);
-                    SubscriptionName subscriptionName = SubscriptionName.of(projectId, subscriptionId);
-                    //set endpoint of subscription push, to URL where POST requests are handled by subscriber
-                    PushConfig pushConfig = PushConfig.newBuilder().setPushEndpoint(pushEndpoint).build();
+        //define subscription and topic names
+        TopicName topicName = TopicName.of(projectId, topicId);
+        SubscriptionName subscriptionName = SubscriptionName.of(projectId, subscriptionId);
+        //set endpoint of subscription push, to URL where POST requests are handled by subscriber
+        PushConfig pushConfig = PushConfig.newBuilder().setPushEndpoint(pushEndpoint).build();
 
-                    //create subscription admin client
-                    SubscriptionAdminClient subscriptionClient =
-                            SubscriptionAdminClient.create(
-                                    SubscriptionAdminSettings.newBuilder()
-                                            .setTransportChannelProvider(channelProvider)
-                                            .setCredentialsProvider(credentialsProvider)
-                                            .build());
+        //create subscription admin client
+        SubscriptionAdminClient subscriptionClient =
+                SubscriptionAdminClient.create(
+                        SubscriptionAdminSettings.newBuilder()
+                                .setTransportChannelProvider(channelProvider)
+                                .setCredentialsProvider(credentialsProvider)
+                                .build());
 
-                    // Create a push subscription with default acknowledgement deadline of 60 seconds.
-                    // Messages not successfully acknowledged within 60 seconds will get resent by the server.
-                    Subscription subscription =
-                            subscriptionClient.createSubscription(subscriptionName, topicName, pushConfig, 60);
-                    System.out.println("Created push subscription: " + subscription.getName());
-            }
+        // Create a push subscription with default acknowledgement deadline of 60 seconds.
+        // Messages not successfully acknowledged within 60 seconds will get resent by the server.
+        Subscription subscription =
+                subscriptionClient.createSubscription(subscriptionName, topicName, pushConfig, 60);
+        System.out.println("Created push subscription: " + subscription.getName());
+    }
 }
