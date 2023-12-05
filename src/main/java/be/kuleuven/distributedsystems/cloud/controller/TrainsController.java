@@ -194,7 +194,6 @@ public class TrainsController {
 
         //make seat URl
         String seatURL = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "?" + TrainsKey;
-        System.out.println("this one");
 
         WebClient webClient = webClientBuilder.baseUrl(seatURL).build();
         //get seat, if error seat wil be null
@@ -217,16 +216,16 @@ public class TrainsController {
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
     @PostMapping("api/confirmQuotes")
     public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
-        for (Quote quote : quotes) {
-            if (Objects.equals(quote.getTrainCompany(), "Eurostar London")) {
-                String br = UUID.randomUUID().toString();
-                Ticket newticket = firestoreController.bookTicket(quote, getUser().getEmail(), br);
-                System.out.println("booked a ticket");
-                firestoreController.deleteTicket(newticket);
-                System.out.println("deleted a ticket");
-                return ResponseEntity.ok("one ticket attempted booked");
-            }
-        }
+//        for (Quote quote : quotes) {
+//            if (Objects.equals(quote.getTrainCompany(), "Eurostar London")) {
+//                String br = UUID.randomUUID().toString();
+//                Ticket newticket = firestoreController.bookTicket(quote, getUser().getEmail(), br);
+//                System.out.println("booked a ticket");
+//                firestoreController.deleteTicket(newticket);
+//                System.out.println("deleted a ticket");
+//                return ResponseEntity.ok("one ticket attempted booked");
+//            }
+//        }
 
         //create list for tickets, generate booking reference and get the user
         List<String> jsonQuotes = new ArrayList<>();

@@ -59,7 +59,6 @@ public class SubscriberController {
     public void createBooking(String rawMessage){
         //list of tickets to be turned into a booking
         List<Ticket> tickets = new ArrayList<>();
-
         Gson gson = new Gson();
 
         // Convert the received message into an array of JSON strings
@@ -104,7 +103,11 @@ public class SubscriberController {
         } catch (WebClientException e) {
             //if the tickets are not available due to someone else bookings them, release the previously booked tickets
             for (Ticket ticket : tickets) {
-                deleteTicket(ticket);
+                if (Objects.equals(ticket.getTrainCompany(), "Eurostar London")){
+                    firestoreController.deleteTicket(ticket);
+                } else {
+                    deleteTicket(ticket);
+                }
             }
         }
     }

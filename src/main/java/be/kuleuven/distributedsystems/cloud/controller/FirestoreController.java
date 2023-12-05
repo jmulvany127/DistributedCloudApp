@@ -43,7 +43,7 @@ public class FirestoreController {
 
         //create data object with fields of the booking to store in db
         Map<String, Object> docData = new HashMap<>();
-        docData.put("bookingReference", id);
+        docData.put("id", id);
         docData.put("customer", customer);
         docData.put("time", time);
         docData.put("tickets", tickets);
@@ -278,6 +278,14 @@ public class FirestoreController {
 
             if (snapshot.exists()) {
                 return snapshot.toObject(Seat.class);
+            } else {
+                DocumentReference unavailSeatsRef = trainDocRef.collection("unavailableSeats").document(seatId);
+                ApiFuture<DocumentSnapshot> snapshotFuture2 = unavailSeatsRef.get();
+                DocumentSnapshot snapshot2 = snapshotFuture2.get();
+
+                if (snapshot2.exists()) {
+                    return snapshot2.toObject(Seat.class);
+                }
             }
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
