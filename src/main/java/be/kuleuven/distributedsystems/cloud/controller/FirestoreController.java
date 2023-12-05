@@ -4,12 +4,15 @@ import be.kuleuven.distributedsystems.cloud.entities.*;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutures;
 import com.google.cloud.firestore.*;
+import com.google.firestore.v1.Write;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import javax.print.Doc;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.LocalDateTime;
@@ -269,12 +272,9 @@ public class FirestoreController {
         CollectionReference colTimeRef = trainDocRef.collection(trainId);
 
         try {
-            System.out.println(seatId);
             DocumentReference seatRef = colTimeRef.document(seatId);
             ApiFuture<DocumentSnapshot> snapshotFuture = seatRef.get();
             DocumentSnapshot snapshot = snapshotFuture.get();
-            System.out.println(seatRef);
-            System.out.println(snapshotFuture);
 
             if (snapshot.exists()) {
                 return snapshot.toObject(Seat.class);
@@ -290,24 +290,25 @@ public class FirestoreController {
         CollectionReference colRef = firestore.collection("OurTrain");
         DocumentReference trainDocRef = colRef.document(quote.getTrainCompany());
         CollectionReference colTimeRef = trainDocRef.collection(quote.getTrainId());
+        DocumentReference seatRef = colTimeRef.document(quote.getSeatId());
         CollectionReference bookedRef = trainDocRef.collection("bookedTickets");
-
-//        System.out.println("colRef" + trainDocRef);
-//        System.out.println("coltimeRef" +colTimeRef.getId());
-//        System.out.println("traindocref" + colRef);
-//        System.out.println("bookedref" +bookedRef);
+        CollectionReference unavailSeatsRef = trainDocRef.collection("unavailableSeats");
 
         try {
             ApiFuture<Object> ticket = firestore.runTransaction(transaction -> {
-                DocumentSnapshot seatSnapshot = (DocumentSnapshot) transaction.get(colTimeRef.document(quote.getSeatId())).get();
-                System.out.println("seats" + seatSnapshot);
+                DocumentSnapshot seatSnapshot = transaction.get(colTimeRef.document(quote.getSeatId())).get();
                 if (seatSnapshot.exists()) {
                     Ticket newTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(),
                             UUID.randomUUID().toString(), customer, bookingRef);
-                    transaction.set(bookedRef.document(), newTicket);
+                    transaction.set(bookedRef.document(newTicket.getTicketId()), newTicket);
+                    //add seats to the list of unavailable seats
+                    Map<String, Object> data = seatSnapshot.getData();
+                    unavailSeatsRef.document(seatSnapshot.getId()).set(data);
+                    // remove the seat from list of available seats
+                    seatRef.delete();
                     return newTicket;
                 } else {
-                    throw new RuntimeException("Seat not available" + seatSnapshot.getData());
+                    throw new RuntimeException("Seat not available. Seat Data: " + seatSnapshot.getData());
                 }
             });
             return (Ticket) ticket.get();
@@ -316,6 +317,66 @@ public class FirestoreController {
         }
     }
 
+    // function to delete a ticket and make the seat available again
+    public void deleteTicket(Ticket ticket) {
+        System.out.println("here");
+        CollectionReference colRef = firestore.collection("OurTrain");
+        DocumentReference trainDocRef = colRef.document(ticket.getTrainCompany());
+        CollectionReference colTimeRef = trainDocRef.collection(ticket.getTrainId());
+        CollectionReference unavailSeatsRef = trainDocRef.collection("unavailableSeats");
+        CollectionReference bookedRef = trainDocRef.collection("bookedTickets");
+
+        try {
+            firestore.runTransaction(transaction -> {
+                //get the seat snapshot for list of unavailable seats
+                DocumentSnapshot seatSnapshot = transaction.get(unavailSeatsRef.document(ticket.getSeatId())).get();
+                if (seatSnapshot.exists()) {
+                    //add seats to the list of available seats
+                    Map<String, Object> data = seatSnapshot.getData();
+                    colTimeRef.document(seatSnapshot.getId()).set(data);
+                    bookedRef.document(ticket.getTicketId()).delete();
+                    unavailSeatsRef.document(ticket.getSeatId()).delete();
+
+                } else {
+                    throw new RuntimeException("Seat not  in unavailable list. deleteTicket called incorrectly");
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // NOT USING BUT NOT DELETING JUST YET
+    // function to add seats to the list of unavailable seats
+    private void addSeatToUnavailable(DocumentSnapshot seatSnapshot, CollectionReference unavailSeatsRef) {
+        Map<String, Object> data = seatSnapshot.getData();
+        unavailSeatsRef.document(seatSnapshot.getId()).set(data);
+        System.out.println("seat added to unavailable");
+    }
+
+    // function to remove the seat from list of available seats
+    private void removeSeat(DocumentReference seatRef) {
+        try {
+            ApiFuture<WriteResult> writeResult = seatRef.delete();
+            writeResult.get();
+            System.out.println("Seat removed successfully");
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error removing seat: " + e.getMessage(), e);
+        }
+    }
 
     //DONT THINK WE NEED TO USE BUT KEEPING FOR THE MOMENT
     public Booking getBooking(String bookingId) {

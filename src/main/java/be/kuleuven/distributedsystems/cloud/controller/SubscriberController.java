@@ -84,7 +84,7 @@ public class SubscriberController {
             for (Quote quote: quotes) {
                 //if quote for our train use firestore function
                 if((quote.getTrainCompany()).equals("Eurostar London")){
-                    tickets.add(firestoreController.bookTicket(quote,email,bookingRef));
+                    tickets.add(firestoreController.bookTicket(quote, email, bookingRef));
                 }
                 //else create URL from quote data and use a put request to retrive the ticket
                 else {

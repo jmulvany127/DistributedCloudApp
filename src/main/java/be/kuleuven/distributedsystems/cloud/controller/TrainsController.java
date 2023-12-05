@@ -219,7 +219,11 @@ public class TrainsController {
     public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
         for (Quote quote : quotes) {
             if (Objects.equals(quote.getTrainCompany(), "Eurostar London")) {
-                firestoreController.bookTicket(quote, getUser().getEmail(), UUID.randomUUID().toString());
+                String br = UUID.randomUUID().toString();
+                Ticket newticket = firestoreController.bookTicket(quote, getUser().getEmail(), br);
+                System.out.println("booked a ticket");
+                firestoreController.deleteTicket(newticket);
+                System.out.println("deleted a ticket");
                 return ResponseEntity.ok("one ticket attempted booked");
             }
         }
