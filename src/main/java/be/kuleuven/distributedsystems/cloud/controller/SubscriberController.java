@@ -1,6 +1,8 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
+
+import java.io.IOException;
 import java.util.*;
 import java.time.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,6 +21,15 @@ public class SubscriberController {
     private final WebClient.Builder webClientBuilder;
     private final FirestoreController firestoreController;
     private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
+    String failSubject = "Train Booking failed";
+    String failMessage = " Hello,\n Unfortunately your desired booking could not be completed. Please revisit our website and attempt another booking. \n Apologies, \n The Book Trains Team .\n";
+    String requestSubject = "TrainBooking request";
+    String requestMessage = "Hello,\n We have received your booking request and are securing your tickets. A confirmation of your booking will be sent shortly. \n Many thanks, \n The Book Trains Team ";
+
+    String confirmationSubject = "Train Booking confirmed";
+    String confirmationMessage = "Hello,\n Congratulations, we have secured your required tickets and you booking has been confirmed. Enjoy your trip! \n Many thanks, \n The Book Trains Team ";
+
+
 
     @Autowired
     public SubscriberController(WebClient.Builder webClientBuilder, FirestoreController firestoreController) {
@@ -28,11 +39,12 @@ public class SubscriberController {
 
     //receives a json String containing an embedded pub sub message
     @PostMapping ("/subscription")
-    public ResponseEntity<?> subscriber(@RequestBody String body) throws JsonProcessingException {
+    public ResponseEntity<?> subscriber(@RequestBody String body) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
         String data = null;
         String rawQuotes = null;
-
+        String userEmail = "";
+        List<Quote> quotes = new ArrayList<>();
         //parse json pubsub message to extract the Quotes json data
         try {
             JsonNode rootNode = objectMapper.readTree(body);
@@ -42,10 +54,26 @@ public class SubscriberController {
                 byte[] decodedBytes = Base64.getDecoder().decode(data);
                 rawQuotes= new String(decodedBytes);
             }
+            Gson gson = new Gson();
+            // Convert the received message into an array of JSON strings
+            List<String> jsonObjects = gson.fromJson(rawQuotes, new ArrayList<String>().getClass());
+
+            // Iterate through each JSON string and convert it to a Quote object
+            for (int i = 0; i < jsonObjects.size(); i++) {
+                if (i < jsonObjects.size() - 1) {
+                    Quote quote = gson.fromJson(jsonObjects.get(i), Quote.class);
+                    quotes.add(quote);
+                } else {
+                    // Last element is the email
+                    userEmail = jsonObjects.get(i);
+                }
+            }
         } catch (Exception e) {
+            sendGridController.sendEmail( userEmail, failSubject, failMessage);
             e.printStackTrace();
         }
-        createBooking(rawQuotes);
+        sendGridController.sendEmail( userEmail, requestSubject, requestMessage);
+        createBooking(quotes, userEmail);
         String Message = "Confirm Quote request received" ;
         return ResponseEntity.status(200).body(Message);
     }
@@ -56,40 +84,23 @@ public class SubscriberController {
         return webClientBuilder.baseUrl(url).build().delete().retrieve().bodyToMono(Ticket.class).block();
     }
 
-    public void createBooking(String rawMessage){
+    public void createBooking(List<Quote> quotes, String userEmail) throws IOException {
         //list of tickets to be turned into a booking
         List<Ticket> tickets = new ArrayList<>();
 
-        Gson gson = new Gson();
 
-        // Convert the received message into an array of JSON strings
-        List<String> jsonObjects = gson.fromJson(rawMessage, new ArrayList<String>().getClass());
-
-        List<Quote> quotes = new ArrayList<>();
-        String email = "";
-
-        // Iterate through each JSON string and convert it to a Quote object
-        for (int i = 0; i < jsonObjects.size(); i++) {
-            if (i < jsonObjects.size() - 1) {
-                Quote quote = gson.fromJson(jsonObjects.get(i), Quote.class);
-                quotes.add(quote);
-            } else {
-                // Last element is the email
-                email = jsonObjects.get(i);
-            }
-        }
         String bookingRef = UUID.randomUUID().toString();
         //create a put request for every quote and store the resulting ticket
         try {
             for (Quote quote: quotes) {
                 //if quote for our train use firestore function
                 if((quote.getTrainCompany()).equals("Eurostar London")){
-                    tickets.add(firestoreController.bookTicket(quote,email,bookingRef));
+                    tickets.add(firestoreController.bookTicket(quote,userEmail,bookingRef));
                 }
                 //else create URL from quote data and use a put request to retrive the ticket
                 else {
                     Ticket ticket = webClientBuilder
-                            .baseUrl("https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + email + "&bookingReference=" +
+                            .baseUrl("https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + userEmail + "&bookingReference=" +
                                     bookingRef + "&" + TrainsKey)
                             .build().put().retrieve()
                             .bodyToMono(Ticket.class)
@@ -99,9 +110,11 @@ public class SubscriberController {
                 }
             }
             //create booking from received tickets under the corresponding user and add to firestore
-            Booking booking = new Booking(UUID.randomUUID().toString(), LocalDateTime.now().toString(), tickets, email);
+            Booking booking = new Booking(UUID.randomUUID().toString(), LocalDateTime.now().toString(), tickets, userEmail);
             firestoreController.addBooking(booking);
+            sendGridController.sendEmail( userEmail, confirmationSubject, confirmationMessage);
         } catch (WebClientException e) {
+            sendGridController.sendEmail( userEmail, failSubject, failMessage);
             //if the tickets are not available due to someone else bookings them, release the previously booked tickets
             for (Ticket ticket : tickets) {
                 deleteTicket(ticket);

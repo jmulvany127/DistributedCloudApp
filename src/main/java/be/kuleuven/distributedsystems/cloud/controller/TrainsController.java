@@ -1,6 +1,8 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
+
+import java.io.IOException;
 import java.util.*;
 
 import com.google.gson.Gson;
@@ -216,7 +218,7 @@ public class TrainsController {
 
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
     @PostMapping("api/confirmQuotes")
-    public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
+    public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) throws IOException {
         //create list for tickets, generate booking reference and get the user
         List<String> jsonQuotes = new ArrayList<>();
         //Convert each quote to json
@@ -320,3 +322,4 @@ public class TrainsController {
         return ResponseEntity.ok(customerArray);
     }
 }
+
