@@ -8,7 +8,7 @@ import com.sendgrid.helpers.mail.objects.Email;
 
 import java.io.IOException;
 
-public class sendGridController{
+public class SendGridController{
     public static void sendEmail (String userEmail,String subject, String message) throws IOException {
         Email from = new Email("joe.mulvany@student.kelueven.be");
         Email to = new Email(userEmail);

@@ -69,10 +69,10 @@ public class SubscriberController {
                 }
             }
         } catch (Exception e) {
-            sendGridController.sendEmail( userEmail, failSubject, failMessage);
+            SendGridController.sendEmail( userEmail, failSubject, failMessage);
             e.printStackTrace();
         }
-        sendGridController.sendEmail( userEmail, requestSubject, requestMessage);
+        SendGridController.sendEmail( userEmail, requestSubject, requestMessage);
         createBooking(quotes, userEmail);
         String Message = "Confirm Quote request received" ;
         return ResponseEntity.status(200).body(Message);
@@ -87,8 +87,7 @@ public class SubscriberController {
     public void createBooking(List<Quote> quotes, String userEmail) throws IOException {
         //list of tickets to be turned into a booking
         List<Ticket> tickets = new ArrayList<>();
-
-
+        
         String bookingRef = UUID.randomUUID().toString();
         //create a put request for every quote and store the resulting ticket
         try {
@@ -112,9 +111,9 @@ public class SubscriberController {
             //create booking from received tickets under the corresponding user and add to firestore
             Booking booking = new Booking(UUID.randomUUID().toString(), LocalDateTime.now().toString(), tickets, userEmail);
             firestoreController.addBooking(booking);
-            sendGridController.sendEmail( userEmail, confirmationSubject, confirmationMessage);
+            SendGridController.sendEmail( userEmail, confirmationSubject, confirmationMessage);
         } catch (WebClientException e) {
-            sendGridController.sendEmail( userEmail, failSubject, failMessage);
+            SendGridController.sendEmail( userEmail, failSubject, failMessage);
             //if the tickets are not available due to someone else bookings them, release the previously booked tickets
             for (Ticket ticket : tickets) {
                 deleteTicket(ticket);
