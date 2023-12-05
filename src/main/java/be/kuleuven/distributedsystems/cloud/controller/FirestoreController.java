@@ -2,6 +2,7 @@ package be.kuleuven.distributedsystems.cloud.controller;
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
 import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutures;
 import com.google.cloud.firestore.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -88,7 +89,7 @@ public class FirestoreController {
                 CollectionReference seatRef = trainDocRef.collection(entry.getKey());
 
                 for (Seat seat : seatsGroupedById) {
-                    seatRef.add(seat);
+                    seatRef.document(seat.getSeatId()).set(seat);
                 }
             }
 
@@ -268,14 +269,15 @@ public class FirestoreController {
         CollectionReference colTimeRef = trainDocRef.collection(trainId);
 
         try {
-            Query query = colTimeRef.whereEqualTo("seatId", seatId);
-            ApiFuture<QuerySnapshot> querySnapshot = query.get();
-            QuerySnapshot snapshot = querySnapshot.get();
+            System.out.println(seatId);
+            DocumentReference seatRef = colTimeRef.document(seatId);
+            ApiFuture<DocumentSnapshot> snapshotFuture = seatRef.get();
+            DocumentSnapshot snapshot = snapshotFuture.get();
+            System.out.println(seatRef);
+            System.out.println(snapshotFuture);
 
-            if (!snapshot.isEmpty()) {
-                QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
-                Seat seat = document.toObject(Seat.class);
-                return seat;
+            if (snapshot.exists()) {
+                return snapshot.toObject(Seat.class);
             }
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
@@ -290,19 +292,29 @@ public class FirestoreController {
         CollectionReference colTimeRef = trainDocRef.collection(quote.getTrainId());
         CollectionReference bookedRef = trainDocRef.collection("bookedTickets");
 
-        return (Ticket) firestore.runTransaction(transaction -> {
-            DocumentSnapshot seatSnapshot = (DocumentSnapshot) transaction.get(colTimeRef.document(quote.getSeatId()));
-            if (seatSnapshot.exists()) {
-                Ticket newTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(),
-                        UUID.randomUUID().toString(), customer, bookingRef);
-                transaction.set(bookedRef.document(), newTicket);
-                return newTicket;
-            } else {
-                throw new RuntimeException("Seat not available");
-            }
-        });
-    }
+//        System.out.println("colRef" + trainDocRef);
+//        System.out.println("coltimeRef" +colTimeRef.getId());
+//        System.out.println("traindocref" + colRef);
+//        System.out.println("bookedref" +bookedRef);
 
+        try {
+            ApiFuture<Object> ticket = firestore.runTransaction(transaction -> {
+                DocumentSnapshot seatSnapshot = (DocumentSnapshot) transaction.get(colTimeRef.document(quote.getSeatId())).get();
+                System.out.println("seats" + seatSnapshot);
+                if (seatSnapshot.exists()) {
+                    Ticket newTicket = new Ticket(quote.getTrainCompany(), quote.getTrainId(), quote.getSeatId(),
+                            UUID.randomUUID().toString(), customer, bookingRef);
+                    transaction.set(bookedRef.document(), newTicket);
+                    return newTicket;
+                } else {
+                    throw new RuntimeException("Seat not available" + seatSnapshot.getData());
+                }
+            });
+            return (Ticket) ticket.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 
     //DONT THINK WE NEED TO USE BUT KEEPING FOR THE MOMENT

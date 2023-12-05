@@ -217,6 +217,13 @@ public class TrainsController {
     //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
     @PostMapping("api/confirmQuotes")
     public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) {
+        for (Quote quote : quotes) {
+            if (Objects.equals(quote.getTrainCompany(), "Eurostar London")) {
+                firestoreController.bookTicket(quote, getUser().getEmail(), UUID.randomUUID().toString());
+                return ResponseEntity.ok("one ticket attempted booked");
+            }
+        }
+
         //create list for tickets, generate booking reference and get the user
         List<String> jsonQuotes = new ArrayList<>();
         //Convert each quote to json
@@ -242,7 +249,6 @@ public class TrainsController {
         }
         return ResponseEntity.status(204).body("Booking Request made");
     }
-
 
 
     // get all the bookings from a specific user
