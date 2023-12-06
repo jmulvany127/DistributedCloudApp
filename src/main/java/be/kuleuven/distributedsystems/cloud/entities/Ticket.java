@@ -1,19 +1,21 @@
 package be.kuleuven.distributedsystems.cloud.entities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.UUID;
 
 public class Ticket {
     private String trainCompany;
-    private UUID trainId;
-    private UUID seatId;
-    private UUID ticketId;
+    private String trainId;
+    private String seatId;
+    private String ticketId;
     private String customer;
     private String bookingReference;
 
-    public Ticket() {
-    }
+    public Ticket() {}
 
-    public Ticket(String trainCompany, UUID trainId, UUID seatId, UUID ticketId, String customer, String bookingReference) {
+    public Ticket(String trainCompany, String trainId, String seatId, String ticketId, String customer, String bookingReference) {
         this.trainCompany = trainCompany;
         this.trainId = trainId;
         this.seatId = seatId;
@@ -22,21 +24,20 @@ public class Ticket {
         this.bookingReference = bookingReference;
     }
 
+
     public String getTrainCompany() {
         return trainCompany;
     }
 
-    public UUID getTrainId() {
+    public String getTrainId() {
         return trainId;
     }
 
-    public UUID getSeatId() {
+    public String getSeatId() {
         return this.seatId;
     }
 
-    public UUID getTicketId() {
-        return this.ticketId;
-    }
+    public String getTicketId() { return this.ticketId; }
 
     public String getCustomer() {
         return this.customer;
