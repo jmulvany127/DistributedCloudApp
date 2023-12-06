@@ -22,12 +22,11 @@ public class SubscriberController {
     private final FirestoreController firestoreController;
     private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     String failSubject = "Train Booking failed";
-    String failMessage = " Hello,\n Unfortunately your desired booking could not be completed. Please revisit our website and attempt another booking. \n Apologies, \n The Book Trains Team .\n";
-    String requestSubject = "TrainBooking request";
+    String failMessage = " Hello,\n Unfortunately your desired booking could not be completed as the requested seats became unavailable. Please revisit our website, https://fos-jm-cloud-app.ew.r.appspot.com, and attempt another booking. \n Apologies, \n The Book Trains Team .\n";
+    String requestSubject = "Train Booking request";
     String requestMessage = "Hello,\n We have received your booking request and are securing your tickets. A confirmation of your booking will be sent shortly. \n Many thanks, \n The Book Trains Team ";
-
     String confirmationSubject = "Train Booking confirmed";
-    String confirmationMessage = "Hello,\n Congratulations, we have secured your required tickets and you booking has been confirmed. Enjoy your trip! \n Many thanks, \n The Book Trains Team ";
+    String confirmationMessage = "Hello,\n Congratulations, we have secured your required tickets and you booking has been confirmed. Please revisit our website, https://fos-jm-cloud-app.ew.r.appspot.com/account, to view your booking and enjoy your trip! \n Many thanks, \n The Book Trains Team ";
 
 
 
@@ -46,32 +45,29 @@ public class SubscriberController {
         String userEmail = "";
         List<Quote> quotes = new ArrayList<>();
         //parse json pubsub message to extract the Quotes json data
-        try {
-            JsonNode rootNode = objectMapper.readTree(body);
-            if (rootNode.has("message") && rootNode.get("message").has("data")) {
-                JsonNode dataNode = rootNode.get("message").get("data");
-                data = objectMapper.readValue(dataNode.toString(), String.class);
-                byte[] decodedBytes = Base64.getDecoder().decode(data);
-                rawQuotes= new String(decodedBytes);
-            }
-            Gson gson = new Gson();
-            // Convert the received message into an array of JSON strings
-            List<String> jsonObjects = gson.fromJson(rawQuotes, new ArrayList<String>().getClass());
 
-            // Iterate through each JSON string and convert it to a Quote object
-            for (int i = 0; i < jsonObjects.size(); i++) {
-                if (i < jsonObjects.size() - 1) {
-                    Quote quote = gson.fromJson(jsonObjects.get(i), Quote.class);
-                    quotes.add(quote);
-                } else {
-                    // Last element is the email
-                    userEmail = jsonObjects.get(i);
-                }
-            }
-        } catch (Exception e) {
-            SendGridController.sendEmail( userEmail, failSubject, failMessage);
-            e.printStackTrace();
+        JsonNode rootNode = objectMapper.readTree(body);
+        if (rootNode.has("message") && rootNode.get("message").has("data")) {
+            JsonNode dataNode = rootNode.get("message").get("data");
+            data = objectMapper.readValue(dataNode.toString(), String.class);
+            byte[] decodedBytes = Base64.getDecoder().decode(data);
+            rawQuotes= new String(decodedBytes);
         }
+        Gson gson = new Gson();
+        // Convert the received message into an array of JSON strings
+        List<String> jsonObjects = gson.fromJson(rawQuotes, new ArrayList<String>().getClass());
+
+        // Iterate through each JSON string and convert it to a Quote object
+        for (int i = 0; i < jsonObjects.size(); i++) {
+            if (i < jsonObjects.size() - 1) {
+                Quote quote = gson.fromJson(jsonObjects.get(i), Quote.class);
+                quotes.add(quote);
+            } else {
+                // Last element is the email
+                userEmail = jsonObjects.get(i);
+            }
+        }
+
         SendGridController.sendEmail( userEmail, requestSubject, requestMessage);
         createBooking(quotes, userEmail);
         String Message = "Confirm Quote request received" ;
@@ -116,7 +112,11 @@ public class SubscriberController {
             SendGridController.sendEmail( userEmail, failSubject, failMessage);
             //if the tickets are not available due to someone else bookings them, release the previously booked tickets
             for (Ticket ticket : tickets) {
-                deleteTicket(ticket);
+                if (Objects.equals(ticket.getTrainCompany(), "Eurostar London")) {
+                    firestoreController.deleteTicket(ticket);
+                } else {
+                    deleteTicket(ticket);
+                }
             }
         }
     }
