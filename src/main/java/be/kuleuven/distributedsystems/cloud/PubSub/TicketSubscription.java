@@ -1,4 +1,4 @@
-package be.kuleuven.distributedsystems.cloud.PubSUb;
+package be.kuleuven.distributedsystems.cloud.PubSub;
 
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
@@ -29,7 +29,6 @@ public class TicketSubscription {
 
         //Ensures emulator on local host is used instead of actual cloud pub sub
         ManagedChannel channel = ManagedChannelBuilder.forTarget(hostport).usePlaintext().build();
-
         createPushSubscription(projectId, subscriptionId, topicId, pushEndpoint, channel);
     }
 
