@@ -19,37 +19,17 @@ public class TicketsTopic {
     public static void main(String... args) throws Exception {
 
         //define project, pub sub and host details
-        String projectId = "demo-distributed-systems-kul";
-        String topicId = "putTicketRequest";
-        String hostport = "localhost:8083";
-
-        //Ensures emulator on local host is used instead of actual cloud pub sub
-        ManagedChannel channel = ManagedChannelBuilder.forTarget(hostport).usePlaintext().build();
-
-        createTopic(projectId, topicId, channel);
+        String projectId = "fos-jm-cloud-app";
+        String topicId = "confirmBookingRequest";
+        createTopic(projectId, topicId);
     }
 
-    public static void createTopic(String projectId, String topicId, ManagedChannel channel) throws IOException {
-        try {
-            // Set the channel and credentials provider when creating a `TopicAdminClient`
-            TransportChannelProvider channelProvider =
-                    FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
-            CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
-
-            //create topic admin client
-            TopicAdminClient topicClient =
-                    TopicAdminClient.create(
-                            TopicAdminSettings.newBuilder()
-                                    .setTransportChannelProvider(channelProvider)
-                                    .setCredentialsProvider(credentialsProvider)
-                                    .build());
+    public static void createTopic(String projectId, String topicId) throws IOException {
+        try (TopicAdminClient topicClient = TopicAdminClient.create()){
             //create topic
             TopicName topicName = TopicName.of(projectId,topicId);
             Topic topic  = topicClient.createTopic(topicName);
             System.out.println("Created topic: " +topic.getName());
-
-        } finally {
-            channel.shutdown();
         }
     }
 }

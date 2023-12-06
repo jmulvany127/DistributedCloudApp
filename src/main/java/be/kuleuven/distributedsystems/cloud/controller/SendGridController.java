@@ -10,12 +10,12 @@ import java.io.IOException;
 
 public class SendGridController{
     public static void sendEmail (String userEmail,String subject, String message) throws IOException {
-        Email from = new Email("joe.mulvany@student.kelueven.be");
+        Email from = new Email("joe.mulvany@student.kuleuven.be");
         Email to = new Email(userEmail);
         Content content = new Content("text/plain", message);
         Mail mail = new Mail(from, subject, to, content);
 
-        SendGrid sg = new SendGrid("SG.8b7EWdwrTUWaTuvmixT31Q.Ro87mYTg6t4Yd0-Wi98kuedDT62hcCt5hZARvzDs1ewcfI0g.Ngv6U_isnDcIKnKR1nCYeHIGZZgCoYAysAIIr4keduA");
+        SendGrid sg = new SendGrid("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");
         Request request = new Request();
         try {
             request.setMethod(Method.POST);

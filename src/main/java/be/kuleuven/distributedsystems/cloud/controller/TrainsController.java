@@ -145,7 +145,7 @@ public class TrainsController {
             String timesJsonData = getjson(timesURL);
             //get the list of times from the raw json data
             List<String> trainTimes = TrainFunctions.extractTrainTimes(timesJsonData);
-            System.out.println(trainTimes);
+
             return ResponseEntity.ok(trainTimes);
         } else {
             String errorMessage = "Train not found";
@@ -163,7 +163,7 @@ public class TrainsController {
         } else {
             //build the URL to acess seats, then get raw json data
             String seatsURL = "https://" + trainCompany + "/trains/" + trainId + "/seats?time=" + time + "&available=true&" + TrainsKey;
-            System.out.println(seatsURL);
+
             String seatsJsonData = getjson(seatsURL);
 
             //if unreliable trains.com is not reachable an empty string will be returned, give error
@@ -173,7 +173,7 @@ public class TrainsController {
             }
             //extracts a list of unsorted seats
             seats = TrainFunctions.extractSeats(seatsJsonData);
-            System.out.println(seats);
+
         }
 
         List<Seat> sortedSeats = TrainFunctions.orderSeats(seats);
@@ -194,7 +194,7 @@ public class TrainsController {
 
         //make seat URl
         String seatURL = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "?" + TrainsKey;
-        System.out.println("this one");
+
 
         WebClient webClient = webClientBuilder.baseUrl(seatURL).build();
         //get seat, if error seat wil be null

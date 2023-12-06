@@ -1,5 +1,5 @@
 package be.kuleuven.distributedsystems.cloud;
-
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import com.google.api.gax.core.CredentialsProvider;
@@ -46,18 +46,12 @@ public class Application {
 
     @Bean
     public Publisher publisher() throws IOException {
-        TransportChannelProvider channelProvider = FixedTransportChannelProvider.create(
-                    GrpcTransportChannel.create(
-                         ManagedChannelBuilder. forTarget("localhost:8083").usePlaintext().build()));
-        CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
-        String projectId = "demo-distributed-systems-kul";
-        String topicId = "putTicketRequest";
+        String projectId = "fos-jm-cloud-app";
+        String topicId = "confirmBookingRequest";
         TopicName topicName = TopicName.of(projectId, topicId);
         return Publisher
-                    .newBuilder(topicName)
-                    .setChannelProvider(channelProvider)
-                    .setCredentialsProvider(credentialsProvider)
-                    .build();
+                .newBuilder(topicName)
+                .build();
     }
 
 
@@ -68,7 +62,7 @@ public class Application {
 
     @Bean
     public String projectId() {
-        return "demo-distributed-systems-kul";
+        return "fos-jm-cloud-app";
     }
 
     /*
@@ -89,12 +83,11 @@ public class Application {
     }
 
     @Bean
-    public Firestore db() {
+    public Firestore db() throws IOException {
         return FirestoreOptions.getDefaultInstance()
                 .toBuilder()
                 .setProjectId(this.projectId())
-                .setCredentials(new FirestoreOptions.EmulatorCredentials())
-                .setEmulatorHost("localhost:8084")
+                .setCredentials(GoogleCredentials.getApplicationDefault())
                 .build()
                 .getService();
     }
