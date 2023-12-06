@@ -124,7 +124,6 @@ public class TrainsController {
         // to deal with our own train company
         if (Objects.equals(trainCompany, ourTrain)) {
             List<String> ourTrainTimes = firestoreController.getTrainTimesFromId(ourTrain, trainId);
-            System.out.println(ourTrainTimes);
             return ResponseEntity.ok(ourTrainTimes);
         }
 
@@ -161,7 +160,6 @@ public class TrainsController {
         List<Seat> seats = null;
         if (Objects.equals(trainCompany, ourTrain)) {
             seats = firestoreController.getSeatsFromTrainId(ourTrain, time, trainId);
-            System.out.println(seats);
         } else {
             //build the URL to acess seats, then get raw json data
             String seatsURL = "https://" + trainCompany + "/trains/" + trainId + "/seats?time=" + time + "&available=true&" + TrainsKey;
