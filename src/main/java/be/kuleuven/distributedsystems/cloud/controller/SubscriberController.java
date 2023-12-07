@@ -113,7 +113,7 @@ public class SubscriberController {
             Booking booking = new Booking(UUID.randomUUID().toString(), LocalDateTime.now().toString(), tickets, userEmail);
             firestoreController.addBooking(booking);
             SendGridController.sendEmail( userEmail, confirmationSubject, confirmationMessage);
-        } catch (WebClientException e) {
+        } catch (RuntimeException e) {
             SendGridController.sendEmail( userEmail, failSubject, failMessage);
             //if the tickets are not available due to someone else bookings them, release the previously booked tickets
             for (Ticket ticket : tickets) {

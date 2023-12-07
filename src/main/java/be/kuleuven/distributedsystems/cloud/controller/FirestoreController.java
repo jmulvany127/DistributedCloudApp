@@ -241,17 +241,14 @@ public class FirestoreController {
 
         List<Seat> seats = new ArrayList<>();
         try {
-            System.out.println("1 ");
             Query query = colTimeRef.whereEqualTo("time", time).orderBy("name");
             ApiFuture<QuerySnapshot> querySnapshot = query.get();
             List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
-            System.out.println("2 ");
 
             for (QueryDocumentSnapshot document : documents) {
                 Seat seat = document.toObject(Seat.class);
                 seats.add(seat);
             }
-            System.out.println("3 ");
 
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
@@ -339,7 +336,7 @@ public class FirestoreController {
                     unavailSeatsRef.document(ticket.getSeatId()).delete();
 
                 } else {
-                    throw new RuntimeException("Seat not  in unavailable list. deleteTicket called incorrectly");
+                    throw new RuntimeException("Seat not in unavailable list. deleteTicket called incorrectly");
                 }
                 return null;
             });
