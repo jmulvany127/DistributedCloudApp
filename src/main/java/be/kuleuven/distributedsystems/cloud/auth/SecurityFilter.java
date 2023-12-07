@@ -2,6 +2,7 @@ package be.kuleuven.distributedsystems.cloud.auth;
 
 import be.kuleuven.distributedsystems.cloud.entities.User;
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,8 +16,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Collection;
 import java.util.*;
+import be.kuleuven.distributedsystems.cloud.auth.*;
+
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
@@ -26,9 +30,10 @@ public class SecurityFilter extends OncePerRequestFilter {
         // TODO: (level 1) decode Identity Token and assign correct email and role
         //get the openId token and initialise variables
         String auth = extractTokenFromRequest(request);
+        //System.out.println(auth);
         DecodedJWT token = null;
         String email = null;
-        //make every user have the "user" role by defaultFilt
+        //make every user have the "user" role by default
         String role = "user";
 
 
@@ -37,23 +42,41 @@ public class SecurityFilter extends OncePerRequestFilter {
             //take out the "Bearer" at the start of the string and decode
             String[] authParts = auth.split(" ");
             token = JWT.decode(authParts[1]);
-            //extract the email and the
+            //extract the email and the role
             email = String.valueOf(token.getClaim("email"));
             email = email.replace("\"", "");
             role = String.valueOf(token.getClaim("roles"));
         }
+
         //removing the array characters from the string "role"
         role = role.replace("[", "").replace("]", "").replace("\"", "");
 
         //create a new user with the "user" role or the "manager" role
         var otheruser = new User(email, new String[]{role});
 
+        // TODO: (level 2) verify Identity Token
+//        //try {
+//            String[] authParts = auth.split(" ");
+//            var kid = JWT.decode(authParts[1]).getKeyId();
+//            PublicKeyFetcher pubKeyFetcher = new PublicKeyFetcher();
+//            Map<String, String> publicKeys = pubKeyFetcher.fetchPublicKeys();
+//            var pubKey = publicKeys.get(kid);
+//            RSAPublicKey pubKeyConverted = null;
+//            try {
+//                pubKeyConverted = PublicKeyFetcher.convertStringToRSAPublicKey(pubKey);
+//            } catch (Exception e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//        Algorithm algo = Algorithm.RSA256(pubKeyConverted, null);
+//
+//        System.out.println("pubkeyfetcher, should be map" + pubKeyFetcher.fetchPublicKeys());
+//        //}
+
         //given code : create the security context based on the user
         SecurityContext context = SecurityContextHolder.getContext();
         context.setAuthentication(new FirebaseAuthentication(otheruser));
         filterChain.doFilter(request, response);
-
-        // TODO: (level 2) verify Identity Token
     }
 
     private String extractTokenFromRequest(HttpServletRequest request) {

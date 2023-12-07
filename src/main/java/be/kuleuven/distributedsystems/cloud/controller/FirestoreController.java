@@ -347,4 +347,26 @@ public class FirestoreController {
             throw new RuntimeException(e);
         }
     }
+
+    // function to check if a ticket is already booked, used for crashes. it will return the booking ref of the previous ticket if this is the case
+    public String checkTicket(Quote quote, String email) {
+        CollectionReference bookedRef = firestore.collection("OurTrain").document(quote.getTrainCompany()).collection("bookedTickets");
+
+        try {
+            Query query = bookedRef.whereEqualTo("seatId", quote.getSeatId()).whereEqualTo("email", email);
+            QuerySnapshot querySnapshot = query.get().get();
+
+            if (querySnapshot.isEmpty()) {
+                return null;
+            } else {
+                DocumentSnapshot documentSnapshot = querySnapshot.getDocuments().get(0);
+                String bookingRef = documentSnapshot.getString("bookingRef");
+                System.out.println(bookingRef);
+                return bookingRef;
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

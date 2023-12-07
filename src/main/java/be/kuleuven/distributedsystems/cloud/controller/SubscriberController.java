@@ -83,17 +83,22 @@ public class SubscriberController {
     public void createBooking(List<Quote> quotes, String userEmail) throws IOException {
         //list of tickets to be turned into a booking
         List<Ticket> tickets = new ArrayList<>();
-        
         String bookingRef = UUID.randomUUID().toString();
+
         //create a put request for every quote and store the resulting ticket
         try {
             for (Quote quote: quotes) {
                 //if quote for our train use firestore function
                 if((quote.getTrainCompany()).equals("Eurostar London")){
-                    tickets.add(firestoreController.bookTicket(quote,userEmail,bookingRef));
-                }
-                //else create URL from quote data and use a put request to retrive the ticket
-                else {
+                    // check tickets and see if ticket is already booked by the same user if so, don't book it again to ensure
+                    // fault tolerance for crashes during booking process. also ensure that the original bookingid from before the crash is used
+                    String previousBookRef = firestoreController.checkTicket(quote, userEmail);
+                    if (previousBookRef == null) {
+                        tickets.add(firestoreController.bookTicket(quote,userEmail,bookingRef));
+                    } else {
+                        bookingRef = previousBookRef;
+                    }
+                } else {
                     Ticket ticket = webClientBuilder
                             .baseUrl("https://" + quote.getTrainCompany() + "/trains/" + quote.getTrainId() + "/seats/" + quote.getSeatId() + "/ticket?customer=" + userEmail + "&bookingReference=" +
                                     bookingRef + "&" + TrainsKey)

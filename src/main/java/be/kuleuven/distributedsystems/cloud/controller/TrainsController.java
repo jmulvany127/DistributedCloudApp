@@ -1,10 +1,8 @@
 package be.kuleuven.distributedsystems.cloud.controller;
 
 import be.kuleuven.distributedsystems.cloud.entities.*;
-
 import java.io.IOException;
 import java.util.*;
-
 import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.google.api.core.ApiFuture;
@@ -17,8 +15,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Mono;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-
 import static be.kuleuven.distributedsystems.cloud.auth.SecurityFilter.getUser;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -56,7 +52,7 @@ public class TrainsController {
     public String getjson(String URL) {
         WebClient webClient = webClientBuilder.baseUrl(URL).build();
 
-        //retrieves the jsondataas a string, note as the string is built the thread is blocked
+        //retrieves the jsondatas a string, note as the string is built the thread is blocked
         String jsonData = webClient
                 .get()
                 .retrieve()
@@ -77,7 +73,7 @@ public class TrainsController {
         List<Train> allTrains = TrainFunctions.extractTrains(jsonData);
 
         jsonData = getjson(UnreliableTrains);
-        //if unreliable trains.com is not reached an empty string will be returned, eliable trains will still be displayed
+        //if unreliable trains.com is not reached an empty string will be returned, reliable trains will still be displayed
         if (jsonData.isEmpty()) {
             System.out.println("UnreliableTrainCompany.com unreachable");
         }
@@ -269,7 +265,7 @@ public class TrainsController {
         return ResponseEntity.ok(bookingList);
     }
 
-    //blank function just to check authority, should be easy to complete
+    // returns the customer with the most tickets
     @GetMapping("api/getBestCustomers")
     public ResponseEntity<?> getBestCustomers() {
         ArrayList<Customer> customerList = new ArrayList<>();
