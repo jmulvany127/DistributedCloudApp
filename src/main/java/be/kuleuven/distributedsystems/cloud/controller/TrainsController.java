@@ -210,7 +210,7 @@ public class TrainsController {
         }
     }
 
-    //take a list of quotes (tentative tickets), make tickets out of them, return them together as one booking
+    //take a list of quotes (tentative tickets), and send to the pub sub worker to get the tickets and make a booking
     @PostMapping("api/confirmQuotes")
     public ResponseEntity<?> confirmQuotes(@RequestBody ArrayList<Quote> quotes) throws IOException {
         //create list for tickets, generate booking reference and get the user

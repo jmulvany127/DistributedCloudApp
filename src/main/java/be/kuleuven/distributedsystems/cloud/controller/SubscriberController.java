@@ -44,8 +44,8 @@ public class SubscriberController {
         String rawQuotes = null;
         String userEmail = "";
         List<Quote> quotes = new ArrayList<>();
-        //parse json pubsub message to extract the Quotes json data
 
+        //parse json pubsub message to extract the Quotes json data
         JsonNode rootNode = objectMapper.readTree(body);
         if (rootNode.has("message") && rootNode.get("message").has("data")) {
             JsonNode dataNode = rootNode.get("message").get("data");
@@ -67,19 +67,22 @@ public class SubscriberController {
                 userEmail = jsonObjects.get(i);
             }
         }
-
+        //send User eail notifying them that there booking request has been received
         SendGridController.sendEmail( userEmail, requestSubject, requestMessage);
+        //book the tickets
         createBooking(quotes, userEmail);
         String Message = "Confirm Quote request received" ;
         return ResponseEntity.status(200).body(Message);
     }
 
+    //"unbook" the tickets when a rollback is needed
     public Ticket deleteTicket(Ticket ticket) {
         String url = "https://" + ticket.getTrainCompany() + "/trains/" + ticket.getTrainId() + "/seats/" + ticket.getSeatId() + "/ticket/"
                      + ticket.getTicketId() + "?" + TrainsKey;
         return webClientBuilder.baseUrl(url).build().delete().retrieve().bodyToMono(Ticket.class).block();
     }
 
+    //take a list of quotes and a user email and make a booking
     public void createBooking(List<Quote> quotes, String userEmail) throws IOException {
         //list of tickets to be turned into a booking
         List<Ticket> tickets = new ArrayList<>();
@@ -112,6 +115,7 @@ public class SubscriberController {
             //create booking from received tickets under the corresponding user and add to firestore
             Booking booking = new Booking(UUID.randomUUID().toString(), LocalDateTime.now().toString(), tickets, userEmail);
             firestoreController.addBooking(booking);
+            //send user email confirming there booking has been made
             SendGridController.sendEmail( userEmail, confirmationSubject, confirmationMessage);
         } catch (RuntimeException e) {
             SendGridController.sendEmail( userEmail, failSubject, failMessage);

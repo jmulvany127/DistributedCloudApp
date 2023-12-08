@@ -27,13 +27,13 @@ if (location.hostname === "localhost") {
   };
 } else {
   firebaseConfig = {
-     apiKey: "AIzaSyCImL3QklOWF5gBFGsiWunXsKtcFkIp2qI",
-          authDomain: "fos-jm-cloud-app.firebaseapp.com",
-          projectId: "fos-jm-cloud-app",
-          storageBucket: "fos-jm-cloud-app.appspot.com",
-          messagingSenderId: "121364572044",
-          appId: "1:121364572044:web:fbfb8e75d16034781698a9",
-          measurementId: "G-8NZQ05SD61"
+            apiKey: "AIzaSyC2IO7Rqn-fC0CrjGjLSAMxRxyCoLobdBE",
+            authDomain: "fos-jm-cloud-app-2.firebaseapp.com",
+            projectId: "fos-jm-cloud-app-2",
+            storageBucket: "fos-jm-cloud-app-2.appspot.com",
+            messagingSenderId: "32138259291",
+            appId: "1:32138259291:web:5698742e3e8f2b734a887e",
+            measurementId: "G-7N6E3VXNHR"
   };
 }
 
