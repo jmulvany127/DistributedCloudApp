@@ -21,65 +21,50 @@ import java.util.Collection;
 import java.util.*;
 import be.kuleuven.distributedsystems.cloud.auth.*;
 
-
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // TODO: (level 1) decode Identity Token and assign correct email and role
-        //get the openId token and initialise variables
+        // get the openId token and initialise variables
         String auth = extractTokenFromRequest(request);
-        String projectId = "fos-jm-cloud-app";
         DecodedJWT token = null;
         String email = null;
-        //make every user have the "user" role by default
+        // make every user have the "user" role by default
         String role = "user";
 
-
-        //check to ensure authorization token is not null
+        // check to ensure authorization token is not null
         if (auth != null){
-            //take out the "Bearer" at the start of the string and decode
+            // take out the "Bearer" at the start of the string and decode, extracting role and email
             String[] authParts = auth.split(" ");
             token = JWT.decode(authParts[1]);
-            //extract the email and the role
             email = String.valueOf(token.getClaim("email"));
             email = email.replace("\"", "");
             role = String.valueOf(token.getClaim("roles"));
         }
 
-        //removing the array characters from the string "role"
+        // removing the array characters from the string "role"
         role = role.replace("[", "").replace("]", "").replace("\"", "");
-
-        //create a new user with the "user" role or the "manager" role
         var otheruser = new User(email, new String[]{role});
 
         // TODO: (level 2) verify Identity Token
+        String projectId = "fos-jm-cloud-app";
+        PublicKeyFetcher pubKeyFetcher = new PublicKeyFetcher();
+
         try {
-            String[] authParts = auth.split(" ");
-            var kid = JWT.decode(authParts[1]).getKeyId();
-            PublicKeyFetcher pubKeyFetcher = new PublicKeyFetcher();
+            // get kid from token, get public keys from google endpoint
+            var kid = token.getKeyId();
             Map<String, String> publicKeys = pubKeyFetcher.fetchPublicKeys();
             var pubKey = publicKeys.get(kid);
             RSAPublicKey pubKeyConverted = null;
             try {
                 pubKeyConverted = PublicKeyFetcher.convertStringToRSAPublicKey(pubKey);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Error converting X509 cert to RSA key");
             }
 
-            System.out.println("public key converted" + pubKeyConverted);
-            System.out.println("token" + token);
-            System.out.println("kid" + kid);
-
-
             Algorithm algo = Algorithm.RSA256(pubKeyConverted, null);
-
-            System.out.println("algo" + algo);
-
-            assert token != null;
-            System.out.println("token " + token);
-
             DecodedJWT jwt = JWT.require(algo)
                     .withIssuer("https://securetoken.google.com/" + projectId)
                     .build()
@@ -88,7 +73,6 @@ public class SecurityFilter extends OncePerRequestFilter {
             throw new RuntimeException("Error verifying token");
         }
 
-        //given code : create the security context based on the user
         SecurityContext context = SecurityContextHolder.getContext();
         context.setAuthentication(new FirebaseAuthentication(otheruser));
         filterChain.doFilter(request, response);

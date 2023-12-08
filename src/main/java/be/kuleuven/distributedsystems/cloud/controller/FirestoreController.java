@@ -357,9 +357,7 @@ public class FirestoreController {
                 return null;
             } else {
                 DocumentSnapshot documentSnapshot = querySnapshot.getDocuments().get(0);
-                String bookingRef = documentSnapshot.getString("bookingRef");
-                System.out.println(bookingRef);
-                return bookingRef;
+                return documentSnapshot.getString("bookingRef");
             }
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
