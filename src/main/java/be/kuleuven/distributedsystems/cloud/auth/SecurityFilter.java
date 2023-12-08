@@ -30,7 +30,7 @@ public class SecurityFilter extends OncePerRequestFilter {
         // TODO: (level 1) decode Identity Token and assign correct email and role
         //get the openId token and initialise variables
         String auth = extractTokenFromRequest(request);
-        //System.out.println(auth);
+        String projectId = "fos-jm-cloud-app";
         DecodedJWT token = null;
         String email = null;
         //make every user have the "user" role by default
@@ -55,23 +55,38 @@ public class SecurityFilter extends OncePerRequestFilter {
         var otheruser = new User(email, new String[]{role});
 
         // TODO: (level 2) verify Identity Token
-//        //try {
-//            String[] authParts = auth.split(" ");
-//            var kid = JWT.decode(authParts[1]).getKeyId();
-//            PublicKeyFetcher pubKeyFetcher = new PublicKeyFetcher();
-//            Map<String, String> publicKeys = pubKeyFetcher.fetchPublicKeys();
-//            var pubKey = publicKeys.get(kid);
-//            RSAPublicKey pubKeyConverted = null;
-//            try {
-//                pubKeyConverted = PublicKeyFetcher.convertStringToRSAPublicKey(pubKey);
-//            } catch (Exception e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//        Algorithm algo = Algorithm.RSA256(pubKeyConverted, null);
-//
-//        System.out.println("pubkeyfetcher, should be map" + pubKeyFetcher.fetchPublicKeys());
-//        //}
+        try {
+            String[] authParts = auth.split(" ");
+            var kid = JWT.decode(authParts[1]).getKeyId();
+            PublicKeyFetcher pubKeyFetcher = new PublicKeyFetcher();
+            Map<String, String> publicKeys = pubKeyFetcher.fetchPublicKeys();
+            var pubKey = publicKeys.get(kid);
+            RSAPublicKey pubKeyConverted = null;
+            try {
+                pubKeyConverted = PublicKeyFetcher.convertStringToRSAPublicKey(pubKey);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            System.out.println("public key converted" + pubKeyConverted);
+            System.out.println("token" + token);
+            System.out.println("kid" + kid);
+
+
+            Algorithm algo = Algorithm.RSA256(pubKeyConverted, null);
+
+            System.out.println("algo" + algo);
+
+            assert token != null;
+            System.out.println("token " + token);
+
+            DecodedJWT jwt = JWT.require(algo)
+                    .withIssuer("https://securetoken.google.com/" + projectId)
+                    .build()
+                    .verify(token);
+        } catch (Exception e) {
+            throw new RuntimeException("Error verifying token");
+        }
 
         //given code : create the security context based on the user
         SecurityContext context = SecurityContextHolder.getContext();
