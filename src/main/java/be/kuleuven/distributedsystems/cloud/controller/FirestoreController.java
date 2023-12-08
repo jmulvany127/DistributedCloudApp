@@ -241,17 +241,14 @@ public class FirestoreController {
 
         List<Seat> seats = new ArrayList<>();
         try {
-            System.out.println("1 ");
             Query query = colTimeRef.whereEqualTo("time", time).orderBy("name");
             ApiFuture<QuerySnapshot> querySnapshot = query.get();
             List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
-            System.out.println("2 ");
 
             for (QueryDocumentSnapshot document : documents) {
                 Seat seat = document.toObject(Seat.class);
                 seats.add(seat);
             }
-            System.out.println("3 ");
 
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
@@ -339,7 +336,7 @@ public class FirestoreController {
                     unavailSeatsRef.document(ticket.getSeatId()).delete();
 
                 } else {
-                    throw new RuntimeException("Seat not  in unavailable list. deleteTicket called incorrectly");
+                    throw new RuntimeException("Seat not in unavailable list. deleteTicket called incorrectly");
                 }
                 return null;
             });
@@ -347,4 +344,24 @@ public class FirestoreController {
             throw new RuntimeException(e);
         }
     }
+
+    // function to check if a ticket is already booked, used for crashes. it will return the booking ref of the previous ticket if this is the case
+    public String checkTicket(Quote quote, String email) {
+        CollectionReference bookedRef = firestore.collection("OurTrain").document(quote.getTrainCompany()).collection("bookedTickets");
+
+        try {
+            Query query = bookedRef.whereEqualTo("seatId", quote.getSeatId()).whereEqualTo("email", email);
+            QuerySnapshot querySnapshot = query.get().get();
+
+            if (querySnapshot.isEmpty()) {
+                return null;
+            } else {
+                DocumentSnapshot documentSnapshot = querySnapshot.getDocuments().get(0);
+                return documentSnapshot.getString("bookingRef");
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

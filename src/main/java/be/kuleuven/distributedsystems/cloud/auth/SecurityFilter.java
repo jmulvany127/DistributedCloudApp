@@ -2,6 +2,7 @@ package be.kuleuven.distributedsystems.cloud.auth;
 
 import be.kuleuven.distributedsystems.cloud.entities.User;
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,8 +16,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Collection;
 import java.util.*;
+import be.kuleuven.distributedsystems.cloud.auth.*;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
@@ -24,36 +27,55 @@ public class SecurityFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // TODO: (level 1) decode Identity Token and assign correct email and role
-        //get the openId token and initialise variables
+        // get the openId token and initialise variables
         String auth = extractTokenFromRequest(request);
         DecodedJWT token = null;
         String email = null;
-        //make every user have the "user" role by defaultFilt
+        // make every user have the "user" role by default
         String role = "user";
 
-
-        //check to ensure authorization token is not null
+        // check to ensure authorization token is not null
         if (auth != null){
-            //take out the "Bearer" at the start of the string and decode
+            // take out the "Bearer" at the start of the string and decode, extracting role and email
             String[] authParts = auth.split(" ");
             token = JWT.decode(authParts[1]);
-            //extract the email and the
             email = String.valueOf(token.getClaim("email"));
             email = email.replace("\"", "");
             role = String.valueOf(token.getClaim("roles"));
         }
-        //removing the array characters from the string "role"
-        role = role.replace("[", "").replace("]", "").replace("\"", "");
 
-        //create a new user with the "user" role or the "manager" role
+        // removing the array characters from the string "role"
+        role = role.replace("[", "").replace("]", "").replace("\"", "");
         var otheruser = new User(email, new String[]{role});
 
-        //given code : create the security context based on the user
+        // TODO: (level 2) verify Identity Token
+        String projectId = "fos-jm-cloud-app";
+        PublicKeyFetcher pubKeyFetcher = new PublicKeyFetcher();
+
+        try {
+            // get kid from token, get public keys from google endpoint
+            var kid = token.getKeyId();
+            Map<String, String> publicKeys = pubKeyFetcher.fetchPublicKeys();
+            var pubKey = publicKeys.get(kid);
+            RSAPublicKey pubKeyConverted = null;
+            try {
+                pubKeyConverted = PublicKeyFetcher.convertStringToRSAPublicKey(pubKey);
+            } catch (Exception e) {
+                throw new RuntimeException("Error converting X509 cert to RSA key");
+            }
+
+            Algorithm algo = Algorithm.RSA256(pubKeyConverted, null);
+            DecodedJWT jwt = JWT.require(algo)
+                    .withIssuer("https://securetoken.google.com/" + projectId)
+                    .build()
+                    .verify(token);
+        } catch (Exception e) {
+            throw new RuntimeException("Error verifying token");
+        }
+
         SecurityContext context = SecurityContextHolder.getContext();
         context.setAuthentication(new FirebaseAuthentication(otheruser));
         filterChain.doFilter(request, response);
-
-        // TODO: (level 2) verify Identity Token
     }
 
     private String extractTokenFromRequest(HttpServletRequest request) {
