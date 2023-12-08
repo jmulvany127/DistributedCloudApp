@@ -21,3 +21,7 @@ Here are the essential components and features of our distributed cloud applicat
 - **Data Persistence**: All bookings are stored in Cloud Firestore, providing reliable and scalable data storage. There is also an internal train company with all of its data stored in Cloud Firestore. 
 
 - **ACID Properties**: We maintain Atomicity during the confirmation of quotes, ensuring that either all quotes are successfully reserved or none at all. Consistency, Isolation, and Durability properties are also upheld.
+  
+## Send Grid Notice
+Our Sendgrid account has been deactivated and thus our feedback system is inoperable. Feedback emails will be sent from the application during the booking process however they will remain stuck in the processing phase on the SendGrid server and will never reach the customer.
+
