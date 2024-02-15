@@ -20,7 +20,7 @@ import org.springframework.web.reactive.function.client.WebClientException;
 public class SubscriberController {
     private final WebClient.Builder webClientBuilder;
     private final FirestoreController firestoreController;
-    private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
+    private final String TrainsKey = "KEY_HIDDEN";
     String failSubject = "Train Booking failed";
     String failMessage = " Hello,\n Unfortunately your desired booking could not be completed as the requested seats became unavailable. Please revisit our website, https://fos-jm-cloud-app.ew.r.appspot.com, and attempt another booking. \n Apologies, \n The Book Trains Team .\n";
     String requestSubject = "Train Booking request";
@@ -100,6 +100,7 @@ public class SubscriberController {
                         tickets.add(firestoreController.bookTicket(quote,userEmail,bookingRef));
                     } else {
                         bookingRef = previousBookRef;
+                        // MUST ADD TO TICKETS LIST AGAIN
                     }
                 } else {
                     Ticket ticket = webClientBuilder

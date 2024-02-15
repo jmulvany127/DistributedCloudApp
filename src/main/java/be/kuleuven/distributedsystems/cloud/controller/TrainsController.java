@@ -27,7 +27,7 @@ public class TrainsController {
     public final ObjectMapper objectMapper;
     private final String ReliableTrains = "https://reliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
     private final String UnreliableTrains = "https://unreliabletrains.com/trains?key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
-    private final String TrainsKey = "key=JViZPgNadspVcHsMbDFrdGg0XXxyiE";
+    private final String TrainsKey = "KEY_HIDDEN";
     private final String ourTrain = "Eurostar London";
     private static final Map<String, String> trainCompanies = new HashMap<>();
 
@@ -159,7 +159,6 @@ public class TrainsController {
         } else {
             //build the URL to acess seats, then get raw json data
             String seatsURL = "https://" + trainCompany + "/trains/" + trainId + "/seats?time=" + time + "&available=true&" + TrainsKey;
-
             String seatsJsonData = getjson(seatsURL);
 
             //if unreliable trains.com is not reachable an empty string will be returned, give error
@@ -190,7 +189,6 @@ public class TrainsController {
 
         //make seat URl
         String seatURL = "https://" + trainCompany + "/trains/" + trainId + "/seats/" + seatId + "?" + TrainsKey;
-
 
         WebClient webClient = webClientBuilder.baseUrl(seatURL).build();
         //get seat, if error seat wil be null
@@ -238,7 +236,6 @@ public class TrainsController {
         }
         return ResponseEntity.status(204).body("Booking Request made");
     }
-
 
 
     // get all the bookings from a specific user
