@@ -1,4 +1,4 @@
-# Distributed Cloud Application
+# Distributed Cloud Application- Distributed Systems - KU Leueven Year 4
 
 ## Application Overview
 This distributed cloud application is a Java-based web application developed to manage seat reservations for trains operated by various train companies. The application leverages cloud computing for resource outsourcing and utilizes the Spring Boot framework for streamlined development.
