@@ -19,7 +19,7 @@ public class SendGridController{
 
         //set sendgrid Key and create a new sendgrid request object type
         //Nite that since our sendgrid account is deactivated these emails will not be sent to the recipient howver they will be received by sendgrid as a middle man however will remain in processing here
-        SendGrid sg = new SendGrid("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");
+        SendGrid sg = new SendGrid("Key removed");
         Request request = new Request();
         //Send email to sendGrid and get server response
         try {
